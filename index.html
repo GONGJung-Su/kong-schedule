@@ -957,8 +957,7 @@ function renderDetail(){
   );
 }
 
-// ── SETTINGS MODAL ─────────────────────────────────────────
-function renderSettings(){
+
 // ── SETTINGS MODAL ─────────────────────────────────────────
 function renderSettings(){
   function tog(key,label){
@@ -1067,7 +1066,7 @@ function render(){
 window.addEventListener('resize',()=>{if(viewMode==='month')adjustMonthOverflow();});
 
 // ── FIREBASE 인증 상태 감지 → 앱 시작 ─────────────────────
-if(FB_CONFIGURED && fAuth){
+if(FB_CONFIGURED && fAuth && location.protocol !== 'file:'){
   fAuth.onAuthStateChanged(async user=>{
     if(user){
       fUid=user.uid;
