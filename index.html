@@ -959,5 +959,133 @@ function renderDetail(){
 
 // ── SETTINGS MODAL ─────────────────────────────────────────
 function renderSettings(){
+// ── SETTINGS MODAL ─────────────────────────────────────────
+function renderSettings(){
   function tog(key,label){
-    const sw=h('label',{class:'sw'},(()=>{const i=h('input',{type:'checkbox'});i.checked=settings[key];i.addEventList
+    const sw=h('label',{class:'sw'},(()=>{const i=h('input',{type:'checkbox'});i.checked=settings[key];i.addEventListener('change',e=>{settings[key]=e.target.checked;ss('st',settings);render();});return i;})(),h('span',{class:'sw-sl'}));
+    return h('div',{class:'tog-row'},h('span',{class:'tog-label'},label),sw);
+  }
+  return h('div',{class:'overlay',onClick:closeModal},
+    h('div',{class:'modal',style:{maxWidth:'360px'},onClick:e=>e.stopPropagation()},
+      h('div',{class:'modal-hd'},h('h2',{},'⚙️ 설정'),h('button',{class:'mc',onClick:closeModal},'×')),
+      h('div',{class:'modal-body'},
+        h('div',{class:'s-section'},
+          h('div',{class:'s-title'},'달력 표시'),
+          tog('showLunar','음력 표시'),
+          tog('showHol','공휴일/국경일 표시')
+        ),
+        h('div',{class:'s-section'},
+          h('div',{class:'s-title'},'내 정보'),
+          h('div',{class:'fg'},h('label',{class:'fl'},'이름'),(()=>{
+            const i=h('input',{class:'fi',value:curUser.name});
+            i.addEventListener('change',e=>{curUser.name=e.target.value;ss('curUser',curUser);});return i;
+          })())
+        )
+      ),
+      h('div',{class:'modal-ft'},h('button',{class:'btn bp',onClick:closeModal},'확인'))
+    )
+  );
+}
+
+// ── TEAM MODAL ─────────────────────────────────────────────
+function renderTeam(){
+  return h('div',{class:'overlay',onClick:closeModal},
+    h('div',{class:'modal wide',onClick:e=>e.stopPropagation()},
+      h('div',{class:'modal-hd'},h('h2',{},'👥 팀 공동 일정'),h('button',{class:'mc',onClick:closeModal},'×')),
+      h('div',{class:'modal-body'},
+        h('div',{style:{fontSize:'.8rem',color:'#6b7280',marginBottom:'4px',lineHeight:1.5}},'팀을 만들어 일정을 공유하세요. 팀원의 이름·색상으로 누구의 일정인지 식별할 수 있습니다.'),
+        h('div',{class:'fg'},h('label',{class:'fl'},'새 팀 만들기'),
+          h('div',{style:{display:'flex',gap:'7px'}},(()=>{
+            const inp=h('input',{class:'fi',placeholder:'팀 이름'});
+            const btn=h('button',{class:'btn bp',style:{whiteSpace:'nowrap'},onClick:()=>{
+              const nm=inp.value.trim();if(!nm){toast('팀 이름을 입력하세요');return;}
+              const team={id:uid(),name:nm,members:[{id:curUser.id||uid(),name:curUser.name,color:curUser.color,events:[]}]};
+              teams.push(team);ss('teams',teams);
+              curTeam=team.id;ss('curTeam',curTeam);
+              toast('팀 생성 🎉');render();
+            }},'생성');
+            return[inp,btn];
+          })())
+        ),
+        teams.length>0?h('div',{},
+          h('div',{class:'fl',style:{marginBottom:'7px',marginTop:'4px'}},'팀 목록'),
+          h('div',{class:'team-list'},...teams.map(team=>
+            h('div',{class:'t-item'+(curTeam===team.id?' t-active':''),onClick:()=>{curTeam=curTeam===team.id?null:team.id;ss('curTeam',curTeam);render();}},
+              h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'6px'}},
+                h('span',{style:{fontWeight:700,fontSize:'.84rem'}},team.name),
+                h('span',{style:{fontSize:'.7rem',color:curTeam===team.id?'#4f46e5':'#9ca3af'}},curTeam===team.id?'✓ 활성화 중':'클릭하여 활성화')
+              ),
+              h('div',{style:{display:'flex',gap:'6px',flexWrap:'wrap',marginBottom:'8px'}},...team.members.map(mb=>
+                h('div',{style:{display:'flex',alignItems:'center',gap:'5px',padding:'3px 7px',background:'#f3f4f6',borderRadius:'10px'}},
+                  h('div',{class:'m-avatar',style:{background:mb.color||'#4f46e5',width:'18px',height:'18px',fontSize:'.6rem'}},mb.name.slice(0,1)),
+                  h('span',{style:{fontSize:'.76rem',color:'#374151'}},mb.name+(mb.id===curUser.id?' (나)':''))
+                )
+              )),
+              h('div',{style:{display:'flex',gap:'6px'}},(()=>{
+                const inp=h('input',{class:'fi',style:{fontSize:'.76rem'},placeholder:'팀원 이름 추가'});
+                const btn=h('button',{class:'btn bs',style:{fontSize:'.72rem',padding:'4px 9px',whiteSpace:'nowrap'},onClick:e=>{
+                  e.stopPropagation();const nm=inp.value.trim();if(!nm){toast('이름 입력');return;}
+                  const color=MEMBER_COLORS[team.members.length%MEMBER_COLORS.length];
+                  team.members.push({id:uid(),name:nm,color,events:[]});
+                  ss('teams',teams);toast(`${nm}님 추가`);render();
+                }},'추가');
+                return[inp,btn];
+              })())
+            )
+          ))
+        ):h('div',{style:{textAlign:'center',padding:'20px',color:'#9ca3af',fontSize:'.8rem'}},'팀이 없습니다. 새 팀을 만들어보세요.')
+      ),
+      h('div',{class:'modal-ft'},h('button',{class:'btn bp',onClick:closeModal},'확인'))
+    )
+  );
+}
+
+// ── MAIN RENDER ────────────────────────────────────────────
+let mc=null;
+function renderModal(){
+  if(!mc){mc=document.createElement('div');document.body.appendChild(mc);}
+  mc.innerHTML='';
+  if(modalMode==='add'||modalMode==='edit')mc.appendChild(renderAddEdit());
+  else if(modalMode==='detail')mc.appendChild(renderDetail());
+  else if(modalMode==='settings')mc.appendChild(renderSettings());
+  else if(modalMode==='team')mc.appendChild(renderTeam());
+}
+
+function render(){
+  removePop();
+  const root=document.getElementById('app');root.innerHTML='';
+  const viewEl=viewMode==='month'?renderMonth():viewMode==='2week'?render2Week():renderDay();
+  root.appendChild(h('div',{class:'app'},
+    renderTopbar(),
+    h('div',{class:'body'},renderSidebar(),h('div',{class:'main'},viewEl))
+  ));
+  renderModal();
+  if(viewMode==='month')adjustMonthOverflow();
+}
+
+// 창 크기 변경 시 overflow 재계산
+window.addEventListener('resize',()=>{if(viewMode==='month')adjustMonthOverflow();});
+
+// ── FIREBASE 인증 상태 감지 → 앱 시작 ─────────────────────
+if(FB_CONFIGURED && fAuth){
+  fAuth.onAuthStateChanged(async user=>{
+    if(user){
+      fUid=user.uid;
+      await fbLoad(fUid);
+      const snap=await fDb.ref(`u/${fUid}`).get().catch(()=>null);
+      if(snap&&!snap.exists()&&events.length>0){
+        await fDb.ref(`u/${fUid}`).set({ev:events,st:settings,teams,curTeam}).catch(()=>{});
+      }
+      fbSync(fUid);
+      render();
+    } else {
+      fUid=null;
+      renderLoginScreen();
+    }
+  });
+} else {
+  render();
+}
+</script>
+</body>
+</html>
