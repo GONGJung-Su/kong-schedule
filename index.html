@@ -312,6 +312,11 @@ function showLoginScreen(){
     settings=ls('st',{showLunar:true,showHol:true});
     teams=ls('teams',[]);
     curTeam=ls('curTeam',null);
+    // curUser.name을 로그인 사용자명으로 동기화
+    curUser=ls('curUser',{id:uid(),name:s.username,color:'#4f46e5'});
+    if(!curUser.id){curUser.id=uid();}
+    if(curUser.name!==s.username){curUser.name=s.username;}
+    ss('curUser',curUser);
     // Firebase에서 최신 데이터 동기화
     if(fDb){
       btn.disabled=true;btn.textContent='동기화 중...';
@@ -1014,10 +1019,11 @@ function renderSettings(){
         ),
         h('div',{class:'s-section'},
           h('div',{class:'s-title'},'내 정보'),
-          h('div',{class:'fg'},h('label',{class:'fl'},'이름'),(()=>{
-            const i=h('input',{class:'fi',value:curUser.name});
-            i.addEventListener('change',e=>{curUser.name=e.target.value;ss('curUser',curUser);});return i;
-          })())
+          h('div',{class:'fg'},h('label',{class:'fl'},'이름'),
+            h('div',{class:'fi',style:{background:'#f9fafb',color:'#374151',cursor:'default',display:'flex',alignItems:'center'}},
+              authUser?authUser.username:curUser.name
+            )
+          )
         ),
         // ── 패스워드 변경 (모든 사용자) ──
         h('div',{class:'s-section'},
@@ -1194,6 +1200,8 @@ window.addEventListener('resize',()=>{if(viewMode==='month')adjustMonthOverflow(
         }
       }
       if(authUser){
+        // curUser.name 동기화
+        if(curUser.name!==authUser.username){curUser.name=authUser.username;ss('curUser',curUser);}
         // 세션 존재 → Firebase에서 events/teams 로드
         Promise.all([
           fDb.ref('kong_app/events/'+authUser.username).get(),
