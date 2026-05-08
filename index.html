@@ -294,13 +294,15 @@ function showLoginScreen(){
   root.innerHTML='';
   const errEl=document.createElement('div');
   errEl.className='login-error';
-  const unEl=h('input',{class:'login-input',placeholder:'사용자명',type:'text'});
+  const lastUser=localStorage.getItem('ks_last_user')||'';
+  const unEl=h('input',{class:'login-input',placeholder:'사용자명',type:'text',value:lastUser});
   const pwEl=h('input',{class:'login-input',placeholder:'비밀번호',type:'password'});
   function tryLogin(){
     const u=unEl.value.trim(),p=pwEl.value;
     if(!u||!p){errEl.textContent='사용자명과 비밀번호를 입력하세요.';errEl.style.display='block';return;}
     const s=doLogin(u,p);
     if(!s){errEl.textContent='사용자명 또는 비밀번호가 올바르지 않습니다.';errEl.style.display='block';pwEl.value='';return;}
+    localStorage.setItem('ks_last_user',u);
     // 로그인 성공 → localStorage 먼저 로딩
     events=ls('ev',[]);
     settings=ls('st',{showLunar:true,showHol:true});
@@ -337,7 +339,7 @@ function showLoginScreen(){
     btn
   );
   root.appendChild(h('div',{class:'login-wrap'},card));
-  setTimeout(()=>unEl.focus(),100);
+  setTimeout(()=>{if(lastUser)pwEl.focus();else unEl.focus();},100);
 }
 
 // ── CONSTANTS ──────────────────────────────────────────────
