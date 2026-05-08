@@ -212,6 +212,7 @@ select.fi{cursor:pointer}
 .mb-add-btn{background:#4f46e5;color:white;border:none;padding:5px 11px;border-radius:6px;cursor:pointer;font-size:.84rem;font-weight:600;white-space:nowrap;flex-shrink:0}
 .mb-icon-btn{background:none;border:1px solid #e5e7eb;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:.88rem;flex-shrink:0}
 .mb-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(7,1fr);overflow:hidden;background:#f0f0f0;gap:1px;touch-action:pan-y}
+.mb-grid-land{grid-template-columns:1fr 1fr 1fr!important;grid-template-rows:repeat(5,1fr)!important;grid-auto-flow:column}
 .mb-cell{background:white;padding:4px 5px;cursor:pointer;overflow:hidden;transition:background .1s;min-height:0;display:flex;flex-direction:column}
 .mb-cell:hover{background:#f8faff!important}
 .mb-cell.mb-today{background:#f5f3ff!important}
@@ -596,6 +597,7 @@ function getEvMap(s,en){
 // ── NAVIGATION ─────────────────────────────────────────────
 const _isMobile=window.innerWidth<=700||('ontouchstart' in window&&window.screen.width<=900);
 function isMobile(){return _isMobile;}
+function isLandscape(){return window.innerWidth>window.innerHeight;}
 function navPrev(){
   if(isMobile()||viewMode==='2week'){selDate=addD(wkStart(selDate),-14);const d=parseD(selDate);viewY=d.getFullYear();viewM=d.getMonth();}
   else if(viewMode==='month'){viewM--;if(viewM<0){viewM=11;viewY--;}}
@@ -666,6 +668,12 @@ function renderMobile2Week(){
   const allDays=Array.from({length:14},(_,i)=>{const ds=addD(ws,i);return{d:parseD(ds),ds};});
   const s=allDays[0].ds,en=allDays[13].ds;
   const ebd=getEvMap(s,en);
+  if(isLandscape()){
+    // 가로: 3열×5행, 컬럼 우선 배치 (14일 순서대로)
+    const cells=allDays.map(day=>renderMobileCell(day,ebd));
+    return h('div',{class:'mb-grid mb-grid-land'},...cells);
+  }
+  // 세로: 2열×7행 (1주차 | 2주차)
   const cells=[];
   for(let i=0;i<7;i++){
     cells.push(renderMobileCell(allDays[i],ebd));
@@ -1254,12 +1262,15 @@ function render(){
 }
 
 // 창 크기 변경 시 overflow 재계산
-let _resizeTimer=null;
+let _resizeTimer=null,_wasLandscape=isLandscape();
 window.addEventListener('resize',()=>{
   clearTimeout(_resizeTimer);
   _resizeTimer=setTimeout(()=>{
-    if(modalMode||isMobile())return;
-    if(viewMode==='month')adjustMonthOverflow();
+    if(modalMode)return;
+    if(isMobile()){
+      const land=isLandscape();
+      if(land!==_wasLandscape){_wasLandscape=land;if(authUser)render();}
+    }else if(viewMode==='month'){adjustMonthOverflow();}
   },300);
 });
 
