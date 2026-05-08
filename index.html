@@ -590,7 +590,8 @@ function getEvMap(s,en){
 }
 
 // ── NAVIGATION ─────────────────────────────────────────────
-function isMobile(){return window.innerWidth<=700;}
+const _isMobile=window.innerWidth<=700||('ontouchstart' in window&&window.screen.width<=900);
+function isMobile(){return _isMobile;}
 function navPrev(){
   if(isMobile()||viewMode==='2week'){selDate=addD(wkStart(selDate),-14);const d=parseD(selDate);viewY=d.getFullYear();viewM=d.getMonth();}
   else if(viewMode==='month'){viewM--;if(viewM<0){viewM=11;viewY--;}}
@@ -1249,15 +1250,12 @@ function render(){
 }
 
 // 창 크기 변경 시 overflow 재계산
-let _wasMobile=isMobile();
 let _resizeTimer=null;
 window.addEventListener('resize',()=>{
   clearTimeout(_resizeTimer);
   _resizeTimer=setTimeout(()=>{
-    if(modalMode)return; // 모달 열려 있으면 무시
-    const mob=isMobile();
-    if(mob!==_wasMobile){_wasMobile=mob;if(authUser)render();}
-    else if(!mob&&viewMode==='month')adjustMonthOverflow();
+    if(modalMode||isMobile())return;
+    if(viewMode==='month')adjustMonthOverflow();
   },300);
 });
 
