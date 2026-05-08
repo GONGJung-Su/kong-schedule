@@ -194,13 +194,16 @@ select.fi{cursor:pointer}
 .login-card{background:white;border-radius:18px;padding:44px 36px;text-align:center;box-shadow:0 10px 40px rgba(79,70,229,.13);max-width:340px;width:90%}
 .login-icon{font-size:2.8rem;margin-bottom:14px}
 .login-title{font-size:1.25rem;font-weight:800;color:#1f2937;margin-bottom:8px}
-.login-sub{font-size:.82rem;color:#6b7280;line-height:1.7;margin-bottom:28px;white-space:pre-line}
-.login-btn{background:#4f46e5;color:white;border:none;padding:12px 0;border-radius:9px;font-size:.9rem;font-weight:700;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s;font-family:inherit}
+.login-sub{font-size:.82rem;color:#6b7280;line-height:1.7;margin-bottom:20px;white-space:pre-line}
+.login-field{text-align:left;margin-bottom:12px}
+.login-label{font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:4px}
+.login-input{width:100%;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.9rem;outline:none;font-family:inherit;color:#1f2937;transition:border-color .15s;box-sizing:border-box}
+.login-input:focus{border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.login-error{font-size:.78rem;color:#ef4444;background:#fef2f2;border-radius:7px;padding:8px 10px;margin-bottom:12px;text-align:left;display:none}
+.login-btn{background:#4f46e5;color:white;border:none;padding:12px 0;border-radius:9px;font-size:.9rem;font-weight:700;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s;font-family:inherit;margin-top:8px}
 .login-btn:hover{background:#4338ca}
-.login-cfg{margin-top:14px;font-size:.72rem;color:#ef4444;background:#fef2f2;border-radius:7px;padding:8px 10px;text-align:left;line-height:1.6}
-.user-chip{display:flex;align-items:center;gap:6px;background:#f3f4f6;border-radius:20px;padding:3px 10px 3px 4px}
-.user-avatar{width:22px;height:22px;border-radius:50%;object-fit:cover}
-.user-name{font-size:.75rem;font-weight:600;color:#374151;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-badge{display:flex;align-items:center;gap:5px;background:#f3f4f6;border-radius:20px;padding:3px 10px 3px 8px;font-size:.75rem;font-weight:600;color:#374151}
+.admin-badge{background:#ede9fe;color:#4f46e5;font-size:.6rem;padding:1px 5px;border-radius:8px;font-weight:700;margin-left:2px}
 /* ── MOBILE ── */
 @media(max-width:768px){
   .sidebar{display:none}
@@ -261,6 +264,60 @@ if(FB_CONFIGURED){
     fAuth=firebase.auth();
     fDb=firebase.database();
   }catch(e){console.warn('Firebase init error:',e);}
+}
+
+// ── LOCAL AUTH ─────────────────────────────────────────────
+function getUsers(){
+  const stored=localStorage.getItem('ks_auth_users');
+  if(!stored){
+    const def=[{username:'admin',password:'8432',role:'admin'}];
+    localStorage.setItem('ks_auth_users',JSON.stringify(def));
+    return def;
+  }
+  return JSON.parse(stored);
+}
+function saveUsers(u){localStorage.setItem('ks_auth_users',JSON.stringify(u));}
+function getSession(){return JSON.parse(sessionStorage.getItem('ks_session')||'null');}
+function setSession(u){sessionStorage.setItem('ks_session',JSON.stringify(u));}
+function clearSession(){sessionStorage.removeItem('ks_session');}
+let authUser=getSession();
+function doLogin(username,password){
+  const users=getUsers();
+  const u=users.find(x=>x.username===username&&x.password===password);
+  if(!u)return null;
+  const s={username:u.username,role:u.role};
+  setSession(s);authUser=s;return s;
+}
+function doLogout(){clearSession();authUser=null;showLoginScreen();}
+function isAdmin(){return authUser&&authUser.role==='admin';}
+function showLoginScreen(){
+  const root=document.getElementById('app');
+  root.innerHTML='';
+  const errEl=document.createElement('div');
+  errEl.className='login-error';
+  const unEl=h('input',{class:'login-input',placeholder:'사용자명',type:'text'});
+  const pwEl=h('input',{class:'login-input',placeholder:'비밀번호',type:'password'});
+  function tryLogin(){
+    const u=unEl.value.trim(),p=pwEl.value;
+    if(!u||!p){errEl.textContent='사용자명과 비밀번호를 입력하세요.';errEl.style.display='block';return;}
+    const s=doLogin(u,p);
+    if(!s){errEl.textContent='사용자명 또는 비밀번호가 올바르지 않습니다.';errEl.style.display='block';pwEl.value='';return;}
+    render();
+  }
+  pwEl.addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin();});
+  unEl.addEventListener('keydown',e=>{if(e.key==='Enter')pwEl.focus();});
+  const btn=h('button',{class:'login-btn',onClick:tryLogin},h('span',{},'🔑'),'로그인');
+  const card=h('div',{class:'login-card'},
+    h('div',{class:'login-icon'},'📅'),
+    h('div',{class:'login-title'},"KONG'S 일정 관리"),
+    h('div',{class:'login-sub'},'사용자명과 비밀번호를 입력하세요.'),
+    errEl,
+    h('div',{class:'login-field'},h('label',{class:'login-label'},'사용자명'),unEl),
+    h('div',{class:'login-field'},h('label',{class:'login-label'},'비밀번호'),pwEl),
+    btn
+  );
+  root.appendChild(h('div',{class:'login-wrap'},card));
+  setTimeout(()=>unEl.focus(),100);
 }
 
 // ── CONSTANTS ──────────────────────────────────────────────
@@ -330,13 +387,17 @@ let selDate=todayStr,viewMode='month';
 let modalMode=null,editEv=null,detailEv=null,selEvId=null;
 let form=ef();
 
-function ls(k,d){try{const v=localStorage.getItem('ks_'+k);return v?JSON.parse(v):d;}catch{return d;}}
+function ls(k,d){
+  try{
+    const key=(k==='ev'&&authUser)?'ks_ev_'+authUser.username:'ks_'+k;
+    const v=localStorage.getItem(key);return v?JSON.parse(v):d;
+  }catch{return d;}
+}
 function ss(k,v){
-  try{localStorage.setItem('ks_'+k,JSON.stringify(v));}catch{}
-  // Firebase에도 저장 (로그인 상태일 때)
-  if(fDb&&fUid){
-    fDb.ref(`u/${fUid}/${k}`).set(v).catch(()=>{});
-  }
+  try{
+    const key=(k==='ev'&&authUser)?'ks_ev_'+authUser.username:'ks_'+k;
+    localStorage.setItem(key,JSON.stringify(v));
+  }catch{}
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
 
@@ -529,9 +590,18 @@ function getEvMap(s,en){
   let all=[...events];
   if(curTeam){
     const t=teams.find(t=>t.id===curTeam);
-    if(t)t.members.forEach(mb=>{if(mb.id!==curUser.id)(mb.events||[]).forEach(e=>{
-      all.push({...e,_mb:mb});
-    });});
+    if(t)t.members.forEach(mb=>{
+      // 시스템 사용자 연결된 팀원: localStorage에서 해당 사용자 이벤트 읽기
+      if(mb.username&&mb.username!==authUser?.username){
+        try{
+          const mbEvs=JSON.parse(localStorage.getItem('ks_ev_'+mb.username)||'[]');
+          mbEvs.forEach(e=>all.push({...e,_mb:mb}));
+        }catch{}
+      } else if(!mb.username&&mb.id!==curUser.id){
+        // 기존 방식 (username 없는 팀원)
+        (mb.events||[]).forEach(e=>all.push({...e,_mb:mb}));
+      }
+    });
   }
   const map={};
   all.forEach(e=>{
@@ -615,8 +685,9 @@ function h(tag,attrs,...ch){
 // ── PILL FACTORY ───────────────────────────────────────────
 function makePill(e){
   const pos=e._pos||'single';
-  // 강조 체크된 일정만 배경색 표시 (색상 미선택 시 기본 강조색 #ede9fe)
-  const evColor=e.emphasis?(e.color||'#ede9fe'):null;
+  // 팀원 일정은 팀원 색상으로 표시, 내 일정은 강조 여부로 표시
+  const mbColor=e._mb?e._mb.color:null;
+  const evColor=mbColor||(e.emphasis?(e.color||'#ede9fe'):null);
   let cls='ev-pill';
   if(!evColor)cls+=' ev-none';
   if(e.id===selEvId)cls+=' ev-sel';
@@ -624,13 +695,17 @@ function makePill(e){
   else if(pos==='mid')cls+=' sp-mid';
   else if(pos==='end')cls+=' sp-end';
   const st={};
-  if(evColor){st.background=evColor;st.borderColor=evColor;}
+  if(evColor){
+    st.background=evColor;
+    st.borderColor=mbColor?mbColor:evColor;
+    if(mbColor)st.color='white'; // 팀원 색상일 때 글자 흰색
+  }
   const mbTag=e._mb?` [${e._mb.name}]`:'';
   const recTag=e._ri?' 🔁':'';
   const label=pos==='start'&&e.isMulti?'↔ '+e.title+mbTag+recTag:pos==='end'&&e.isMulti?e.title+' ↩'+mbTag+recTag:(e.startTime?e.startTime+' ':'')+e.title+mbTag+recTag;
   const pill=h('div',{class:cls,style:st},label);
   pill.addEventListener('click',ev=>{ev.stopPropagation();selEvId=e.id;render();});
-  pill.addEventListener('dblclick',ev=>{ev.stopPropagation();openDetail(e);});
+  pill.addEventListener('dblclick',ev=>{ev.stopPropagation();e._mb?null:openDetail(e);}); // 팀원 일정은 수정 불가
   return pill;
 }
 
@@ -653,8 +728,13 @@ function renderTopbar(){
     ),
     h('div',{class:'topbar-right'},
       teamName?h('span',{style:{fontSize:'.72rem',background:'#ede9fe',color:'#4f46e5',padding:'3px 8px',borderRadius:'10px',fontWeight:600}},`팀: ${teamName}`):null,
+      authUser?h('div',{class:'user-badge'},
+        '👤 '+authUser.username,
+        authUser.role==='admin'?h('span',{class:'admin-badge'},'관리자'):null
+      ):null,
       h('button',{class:'icon-btn',onClick:()=>{modalMode='settings';render();}},'⚙️ ',h('span',{class:'btn-lbl'},'설정')),
       h('button',{class:'icon-btn',onClick:()=>{modalMode='team';render();}},'👥 ',h('span',{class:'btn-lbl'},'팀')),
+      h('button',{class:'icon-btn',style:{color:'#ef4444'},onClick:doLogout,title:'로그아웃'},'↩ 로그아웃'),
       h('div',{class:'view-toggle'},
         h('button',{class:'vt-btn'+(viewMode==='day'?' active':''),onClick:()=>setView('day')},'일'),
         h('button',{class:'vt-btn'+(viewMode==='2week'?' active':''),onClick:()=>setView('2week')},'2주'),
@@ -980,7 +1060,72 @@ function renderSettings(){
             const i=h('input',{class:'fi',value:curUser.name});
             i.addEventListener('change',e=>{curUser.name=e.target.value;ss('curUser',curUser);});return i;
           })())
-        )
+        ),
+        // ── 패스워드 변경 (모든 사용자) ──
+        h('div',{class:'s-section'},
+          h('div',{class:'s-title'},'🔒 내 비밀번호 변경'),
+          (()=>{
+            const op=h('input',{class:'fi',type:'password',placeholder:'현재 비밀번호'});
+            const np=h('input',{class:'fi',type:'password',placeholder:'새 비밀번호'});
+            const np2=h('input',{class:'fi',type:'password',placeholder:'새 비밀번호 확인'});
+            const btn=h('button',{class:'btn bp',style:{marginTop:'6px'},onClick:()=>{
+              const users=getUsers();
+              const me=users.find(u=>u.username===authUser.username);
+              if(!me||me.password!==op.value){toast('현재 비밀번호가 올바르지 않습니다.');return;}
+              if(!np.value){toast('새 비밀번호를 입력하세요.');return;}
+              if(np.value!==np2.value){toast('새 비밀번호가 일치하지 않습니다.');return;}
+              me.password=np.value;saveUsers(users);
+              op.value='';np.value='';np2.value='';
+              toast('✅ 비밀번호가 변경되었습니다.');
+            }},'변경');
+            return h('div',{style:{display:'flex',flexDirection:'column',gap:'6px'}},op,np,np2,btn);
+          })()
+        ),
+        // ── 사용자 관리 (관리자 전용) ──
+        isAdmin()?h('div',{class:'s-section'},
+          h('div',{class:'s-title'},'👥 사용자 관리 (관리자)'),
+          (()=>{
+            const users=getUsers();
+            const list=h('div',{style:{display:'flex',flexDirection:'column',gap:'4px',marginBottom:'10px'}},
+              ...users.map(u=>h('div',{style:{display:'flex',alignItems:'center',gap:'6px',padding:'5px 8px',background:'#f9fafb',borderRadius:'7px'}},
+                h('span',{style:{flex:1,fontSize:'.82rem',fontWeight:600}},u.username+(u.role==='admin'?' 👑':'')),
+                // 비밀번호 초기화 (자기 자신 제외)
+                u.username!==authUser.username?h('button',{class:'btn bs',style:{fontSize:'.7rem',padding:'2px 7px'},onClick:()=>{
+                  const pw=prompt(`"${u.username}" 새 비밀번호 입력:`);
+                  if(!pw)return;
+                  u.password=pw;saveUsers(users);toast(`✅ ${u.username} 비밀번호 변경됨`);render();
+                }},'비번변경'):null,
+                // 삭제 (자기 자신과 admin 제외)
+                u.username!==authUser.username&&u.username!=='admin'?h('button',{class:'btn bd',style:{fontSize:'.7rem',padding:'2px 7px'},onClick:()=>{
+                  if(!confirm(`"${u.username}" 삭제?`))return;
+                  const idx=users.indexOf(u);users.splice(idx,1);saveUsers(users);toast(`🗑️ ${u.username} 삭제됨`);render();
+                }},'삭제'):null
+              ))
+            );
+            // 새 사용자 추가
+            const nu=h('input',{class:'fi',placeholder:'사용자명'});
+            const np=h('input',{class:'fi',type:'password',placeholder:'비밀번호'});
+            const addBtn=h('button',{class:'btn bp',style:{marginTop:'4px'},onClick:()=>{
+              const uname=nu.value.trim();const pw=np.value;
+              if(!uname||!pw){toast('사용자명과 비밀번호를 입력하세요.');return;}
+              const all=getUsers();
+              if(all.find(x=>x.username===uname)){toast('이미 존재하는 사용자명입니다.');return;}
+              const roleEl=document.getElementById('new-user-role');
+              all.push({username:uname,password:pw,role:roleEl?roleEl.value:'user'});
+              saveUsers(all);nu.value='';np.value='';toast(`✅ "${uname}" 추가됨`);render();
+            }},'+ 사용자 추가');
+            const roleSelect=document.createElement('select');
+            roleSelect.id='new-user-role';roleSelect.className='fi';roleSelect.style.padding='6px 8px';
+            const o1=document.createElement('option');o1.value='user';o1.textContent='일반 사용자';
+            const o2=document.createElement('option');o2.value='admin';o2.textContent='관리자';
+            roleSelect.appendChild(o1);roleSelect.appendChild(o2);
+            return h('div',{},
+              list,
+              h('div',{class:'s-title',style:{marginTop:'8px'}},'새 사용자 추가'),
+              h('div',{style:{display:'flex',flexDirection:'column',gap:'5px'}},nu,np,roleSelect,addBtn)
+            );
+          })()
+        ):null
       ),
       h('div',{class:'modal-ft'},h('button',{class:'btn bp',onClick:closeModal},'확인'))
     )
@@ -989,6 +1134,7 @@ function renderSettings(){
 
 // ── TEAM MODAL ─────────────────────────────────────────────
 function renderTeam(){
+  const sysUsers=getUsers();
   return h('div',{class:'overlay',onClick:closeModal},
     h('div',{class:'modal wide',onClick:e=>e.stopPropagation()},
       h('div',{class:'modal-hd'},h('h2',{},'👥 팀 공동 일정'),h('button',{class:'mc',onClick:closeModal},'×')),
@@ -999,7 +1145,7 @@ function renderTeam(){
             const inp=h('input',{class:'fi',placeholder:'팀 이름'});
             const btn=h('button',{class:'btn bp',style:{whiteSpace:'nowrap'},onClick:()=>{
               const nm=inp.value.trim();if(!nm){toast('팀 이름을 입력하세요');return;}
-              const team={id:uid(),name:nm,members:[{id:curUser.id||uid(),name:curUser.name,color:curUser.color,events:[]}]};
+              const team={id:uid(),name:nm,members:[{id:curUser.id||uid(),name:authUser?authUser.username:curUser.name,username:authUser?authUser.username:null,color:curUser.color,events:[]}]};
               teams.push(team);ss('teams',teams);
               curTeam=team.id;ss('curTeam',curTeam);
               toast('팀 생성 🎉');render();
@@ -1015,21 +1161,31 @@ function renderTeam(){
                 h('span',{style:{fontWeight:700,fontSize:'.84rem'}},team.name),
                 h('span',{style:{fontSize:'.7rem',color:curTeam===team.id?'#4f46e5':'#9ca3af'}},curTeam===team.id?'✓ 활성화 중':'클릭하여 활성화')
               ),
+              // 팀원 목록
               h('div',{style:{display:'flex',gap:'6px',flexWrap:'wrap',marginBottom:'8px'}},...team.members.map(mb=>
                 h('div',{style:{display:'flex',alignItems:'center',gap:'5px',padding:'3px 7px',background:'#f3f4f6',borderRadius:'10px'}},
                   h('div',{class:'m-avatar',style:{background:mb.color||'#4f46e5',width:'18px',height:'18px',fontSize:'.6rem'}},mb.name.slice(0,1)),
-                  h('span',{style:{fontSize:'.76rem',color:'#374151'}},mb.name+(mb.id===curUser.id?' (나)':''))
+                  h('span',{style:{fontSize:'.76rem',color:'#374151'}},mb.name+(mb.username===authUser?.username?' (나)':mb.id===curUser.id?' (나)':'')+(mb.username?' 🔗':''))
                 )
               )),
-              h('div',{style:{display:'flex',gap:'6px'}},(()=>{
-                const inp=h('input',{class:'fi',style:{fontSize:'.76rem'},placeholder:'팀원 이름 추가'});
-                const btn=h('button',{class:'btn bs',style:{fontSize:'.72rem',padding:'4px 9px',whiteSpace:'nowrap'},onClick:e=>{
-                  e.stopPropagation();const nm=inp.value.trim();if(!nm){toast('이름 입력');return;}
+              // 시스템 사용자 팀에 추가 (관리자 또는 팀원이면 가능)
+              h('div',{style:{display:'flex',gap:'6px',flexWrap:'wrap'}},(()=>{
+                // 아직 팀에 없는 시스템 사용자 목록
+                const notInTeam=sysUsers.filter(u=>!team.members.find(m=>m.username===u.username));
+                if(notInTeam.length===0) return [h('span',{style:{fontSize:'.72rem',color:'#9ca3af'}},'모든 사용자가 팀에 포함되어 있습니다.')];
+                const sel=document.createElement('select');
+                sel.className='fi';sel.style.fontSize='.76rem';sel.style.padding='3px 6px';
+                notInTeam.forEach(u=>{
+                  const o=document.createElement('option');o.value=u.username;o.textContent=u.username+(u.role==='admin'?' 👑':'');sel.appendChild(o);
+                });
+                const addBtn=h('button',{class:'btn bs',style:{fontSize:'.72rem',padding:'4px 9px',whiteSpace:'nowrap'},onClick:e=>{
+                  e.stopPropagation();
+                  const uname=sel.value;if(!uname)return;
                   const color=MEMBER_COLORS[team.members.length%MEMBER_COLORS.length];
-                  team.members.push({id:uid(),name:nm,color,events:[]});
-                  ss('teams',teams);toast(`${nm}님 추가`);render();
-                }},'추가');
-                return[inp,btn];
+                  team.members.push({id:uid(),name:uname,username:uname,color,events:[]});
+                  ss('teams',teams);toast(`${uname}님 팀에 추가`);render();
+                }},'+ 사용자 추가');
+                return[sel,addBtn];
               })())
             )
           ))
@@ -1066,9 +1222,8 @@ function render(){
 // 창 크기 변경 시 overflow 재계산
 window.addEventListener('resize',()=>{if(viewMode==='month')adjustMonthOverflow();});
 
-// ── 앱 시작 (로컬 모드) ─────────────────────
-render();
+// ── 앱 시작 ─────────────────────────────────
+if(authUser){render();}else{showLoginScreen();}
 </script>
 </body>
 </html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
