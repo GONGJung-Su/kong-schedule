@@ -130,6 +130,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans
 .modal{background:white;border-radius:13px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:mu .18s ease}
 .modal.wide{max-width:560px}
 @keyframes mu{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .modal-hd{padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:white;z-index:1;border-bottom:1px solid transparent}
 .modal-hd h2{font-size:.95rem;font-weight:700;color:#111827}
 .mc{background:none;border:none;font-size:1.1rem;color:#9ca3af;cursor:pointer;padding:3px;border-radius:4px;line-height:1}
@@ -367,8 +368,24 @@ function fbSync(uid){
 }
 function fbLogin(){
   if(!fAuth)return;
+  // 로딩 화면 표시
+  const root=document.getElementById('app');
+  root.innerHTML='';
+  root.appendChild(h('div',{class:'login-wrap'},
+    h('div',{class:'login-card'},
+      h('div',{class:'login-icon',style:{animation:'spin 1s linear infinite'}},'⏳'),
+      h('div',{class:'login-title'},'로그인 중...'),
+      h('div',{class:'login-sub'},'Google 계정 선택 화면으로 이동합니다.\n잠시만 기다려 주세요.'),
+      h('button',{class:'login-btn',style:{background:'#888',cursor:'default'},onClick:()=>renderLoginScreen()},
+        '❌ 취소'
+      )
+    )
+  ));
   const provider=new firebase.auth.GoogleAuthProvider();
-  fAuth.signInWithPopup(provider).catch(e=>{toast('로그인 실패: '+e.message);});
+  fAuth.signInWithRedirect(provider).catch(e=>{
+    toast('로그인 실패: '+e.message);
+    renderLoginScreen();
+  });
 }
 function fbLogout(){
   if(!fAuth)return;
@@ -1067,6 +1084,13 @@ window.addEventListener('resize',()=>{if(viewMode==='month')adjustMonthOverflow(
 
 // ── FIREBASE 인증 상태 감지 → 앱 시작 ─────────────────────
 if(FB_CONFIGURED && fAuth && location.protocol !== 'file:'){
+  // redirect 로그인 결과 처리 (signInWithRedirect 후 돌아올 때)
+  fAuth.getRedirectResult().catch(e=>{
+    if(e.code!=='auth/no-current-user'){
+      toast('로그인 오류: '+e.message);
+      renderLoginScreen();
+    }
+  });
   fAuth.onAuthStateChanged(async user=>{
     if(user){
       fUid=user.uid;
