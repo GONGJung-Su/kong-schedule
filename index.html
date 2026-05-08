@@ -213,13 +213,14 @@ select.fi{cursor:pointer}
 .mb-icon-btn{background:none;border:1px solid #e5e7eb;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:.88rem;flex-shrink:0}
 .mb-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(7,1fr);overflow:hidden;background:#f0f0f0;gap:1px;touch-action:pan-y}
 .mb-grid-land{grid-template-columns:1fr 1fr 1fr!important;grid-template-rows:repeat(5,1fr)!important;grid-auto-flow:column}
-.mb-cell{background:white;padding:4px 5px;cursor:pointer;overflow:hidden;transition:background .1s;min-height:0;display:flex;flex-direction:column}
+.mb-cell{background:white;padding:4px 5px;cursor:pointer;overflow:hidden;transition:background .1s;min-height:0;display:flex;flex-direction:row;align-items:flex-start;gap:3px}
 .mb-cell:hover{background:#f8faff!important}
 .mb-cell.mb-today{background:#f5f3ff!important}
 .mb-cell.mb-sel:not(.mb-today){background:#eef2ff!important}
-.mb-day-hd{display:flex;align-items:center;gap:2px;margin-bottom:2px;flex-shrink:0}
-.mb-dow{font-size:.68rem;font-weight:700;letter-spacing:.3px}
+.mb-day-hd{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:28px;padding-top:1px}
+.mb-dow{font-size:.68rem;font-weight:700;letter-spacing:.3px;line-height:1.2}
 .mb-dnum{font-size:.82rem;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mb-evs{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding-top:1px}
 .mb-dnum.is-today{background:#4f46e5;color:white}
 .mb-dnum.is-red{color:#ef4444}
 .mb-dnum.is-sat{color:#3b82f6}
@@ -657,8 +658,10 @@ function renderMobileCell({d,ds},ebd){
       h('span',{class:'mb-dow',style:{color:dowColor}},DOWS[dow]),
       h('span',{class:nc},String(d.getDate()))
     ),
-    ...dayEvs.slice(0,3).map(e=>makePill(e)),
-    dayEvs.length>3?h('div',{class:'more-ev'},`+${dayEvs.length-3}`):null
+    h('div',{class:'mb-evs'},
+      ...dayEvs.slice(0,3).map(e=>makePill(e)),
+      dayEvs.length>3?h('div',{class:'more-ev'},`+${dayEvs.length-3}`):null
+    )
   );
   cell.addEventListener('dblclick',ev=>{ev.stopPropagation();openAdd(ds);});
   return cell;
@@ -1272,6 +1275,28 @@ window.addEventListener('resize',()=>{
       if(land!==_wasLandscape){_wasLandscape=land;if(authUser)render();}
     }else if(viewMode==='month'){adjustMonthOverflow();}
   },300);
+});
+
+// ── 종료 확인 ────────────────────────────────
+function showExitConfirm(){
+  const ov=h('div',{class:'overlay',style:{zIndex:9999}},
+    h('div',{class:'modal',style:{maxWidth:'260px'},onClick:e=>e.stopPropagation()},
+      h('div',{class:'modal-body',style:{textAlign:'center',padding:'28px 20px 16px'}},
+        h('div',{style:{fontSize:'1.6rem',marginBottom:'10px'}},'👋'),
+        h('div',{style:{fontSize:'1rem',fontWeight:700,color:'#111827',marginBottom:'6px'}},'정말 종료할까요?')
+      ),
+      h('div',{class:'modal-ft',style:{justifyContent:'center',gap:'8px'}},
+        h('button',{class:'btn bs',onClick:()=>ov.remove()},'아니오'),
+        h('button',{class:'btn bd',onClick:()=>{ov.remove();window.history.go(-2);}},'종료')
+      )
+    )
+  );
+  document.body.appendChild(ov);
+}
+window.history.pushState(null,'',location.href);
+window.addEventListener('popstate',()=>{
+  window.history.pushState(null,'',location.href);
+  showExitConfirm();
 });
 
 // ── 앱 시작 ─────────────────────────────────
