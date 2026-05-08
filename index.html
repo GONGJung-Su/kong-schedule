@@ -1198,6 +1198,10 @@ window.addEventListener('resize',()=>{if(viewMode==='month')adjustMonthOverflow(
           if(!fbUsers.find(u=>u.username==='admin'))fbUsers.unshift({username:'admin',password:'8432',role:'admin'});
           localStorage.setItem('ks_auth_users',JSON.stringify(fbUsers));
         }
+      }else{
+        // Firebase에 사용자 없음 → localStorage 사용자를 Firebase에 업로드 (최초 1회 마이그레이션)
+        const localUsers=getUsers();
+        if(localUsers.length>0)fDb.ref('kong_app/users').set(localUsers).catch(()=>{});
       }
       if(authUser){
         // curUser.name 동기화
