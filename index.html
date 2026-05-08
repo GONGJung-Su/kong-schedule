@@ -655,22 +655,6 @@ function renderTopbar(){
       teamName?h('span',{style:{fontSize:'.72rem',background:'#ede9fe',color:'#4f46e5',padding:'3px 8px',borderRadius:'10px',fontWeight:600}},`팀: ${teamName}`):null,
       h('button',{class:'icon-btn',onClick:()=>{modalMode='settings';render();}},'⚙️ ',h('span',{class:'btn-lbl'},'설정')),
       h('button',{class:'icon-btn',onClick:()=>{modalMode='team';render();}},'👥 ',h('span',{class:'btn-lbl'},'팀')),
-      // 로그인 사용자 표시
-      (()=>{
-        if(!FB_CONFIGURED)return null;
-        if(fUid&&fAuth&&fAuth.currentUser){
-          const u=fAuth.currentUser;
-          return h('div',{style:{display:'flex',alignItems:'center',gap:'6px'}},
-            h('div',{class:'user-chip'},
-              u.photoURL?h('img',{class:'user-avatar',src:u.photoURL,referrerpolicy:'no-referrer'}):
-                h('div',{class:'user-avatar',style:{background:'#4f46e5',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontSize:'.65rem',fontWeight:700}},(u.displayName||'U').slice(0,1)),
-              h('span',{class:'user-name'},u.displayName||u.email||'사용자')
-            ),
-            h('button',{class:'icon-btn',onClick:fbLogout,title:'로그아웃'},'↩')
-          );
-        }
-        return h('button',{class:'icon-btn',onClick:fbLogin,style:{color:'#4f46e5',fontWeight:600}},'🔐 동기화');
-      })(),
       h('div',{class:'view-toggle'},
         h('button',{class:'vt-btn'+(viewMode==='day'?' active':''),onClick:()=>setView('day')},'일'),
         h('button',{class:'vt-btn'+(viewMode==='2week'?' active':''),onClick:()=>setView('2week')},'2주'),
@@ -1082,33 +1066,9 @@ function render(){
 // 창 크기 변경 시 overflow 재계산
 window.addEventListener('resize',()=>{if(viewMode==='month')adjustMonthOverflow();});
 
-// ── FIREBASE 인증 상태 감지 → 앱 시작 ─────────────────────
-if(FB_CONFIGURED && fAuth && location.protocol !== 'file:'){
-  // redirect 로그인 결과 처리 (signInWithRedirect 후 돌아올 때)
-  fAuth.getRedirectResult().catch(e=>{
-    if(e.code!=='auth/no-current-user'){
-      toast('로그인 오류: '+e.message);
-      renderLoginScreen();
-    }
-  });
-  fAuth.onAuthStateChanged(async user=>{
-    if(user){
-      fUid=user.uid;
-      await fbLoad(fUid);
-      const snap=await fDb.ref(`u/${fUid}`).get().catch(()=>null);
-      if(snap&&!snap.exists()&&events.length>0){
-        await fDb.ref(`u/${fUid}`).set({ev:events,st:settings,teams,curTeam}).catch(()=>{});
-      }
-      fbSync(fUid);
-      render();
-    } else {
-      fUid=null;
-      renderLoginScreen();
-    }
-  });
-} else {
-  render();
-}
+// ── 앱 시작 (로컬 모드) ─────────────────────
+render();
 </script>
 </body>
 </html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
