@@ -211,7 +211,7 @@ select.fi{cursor:pointer}
 .mb-today-btn{background:none;border:1px solid #e5e7eb;color:#374151;padding:4px 7px;border-radius:6px;cursor:pointer;font-size:.75rem;flex-shrink:0}
 .mb-add-btn{background:#4f46e5;color:white;border:none;padding:4px 9px;border-radius:6px;cursor:pointer;font-size:.75rem;font-weight:600;white-space:nowrap;flex-shrink:0}
 .mb-icon-btn{background:none;border:1px solid #e5e7eb;padding:4px 7px;border-radius:6px;cursor:pointer;font-size:.8rem;flex-shrink:0}
-.mb-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(7,1fr);overflow:hidden;background:#f0f0f0;gap:1px}
+.mb-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(7,1fr);overflow:hidden;background:#f0f0f0;gap:1px;touch-action:pan-y}
 .mb-cell{background:white;padding:3px 4px;cursor:pointer;overflow:hidden;transition:background .1s;min-height:0;display:flex;flex-direction:column}
 .mb-cell:hover{background:#f8faff!important}
 .mb-cell.mb-today{background:#f5f3ff!important}
@@ -440,6 +440,21 @@ function removePop(){const p=document.getElementById('__more_pop__');if(p)p.remo
 document.addEventListener('click',removePop);
 document.addEventListener('scroll',removePop,true);
 
+// ── 모바일 전역 스와이프 ────────────────────────────────────
+let _swX=0,_swY=0;
+document.addEventListener('touchstart',e=>{
+  _swX=e.touches[0].clientX;
+  _swY=e.touches[0].clientY;
+},{passive:true});
+document.addEventListener('touchend',e=>{
+  if(!isMobile()||modalMode)return;
+  const dx=e.changedTouches[0].clientX-_swX;
+  const dy=e.changedTouches[0].clientY-_swY;
+  if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.2){
+    dx<0?navNext():navPrev();
+  }
+},{passive:true});
+
 // ── MORE-EV 팝업 생성 (공통) ─────────────────────────────────
 function createMoreEl(hidden){
   const more=document.createElement('div');
@@ -651,21 +666,7 @@ function renderMobile2Week(){
     cells.push(renderMobileCell(allDays[i],ebd));
     cells.push(renderMobileCell(allDays[i+7],ebd));
   }
-  const grid=h('div',{class:'mb-grid'},...cells);
-  // 스와이프 제스처
-  let touchStartX=0,touchStartY=0;
-  grid.addEventListener('touchstart',e=>{
-    touchStartX=e.touches[0].clientX;
-    touchStartY=e.touches[0].clientY;
-  },{passive:true});
-  grid.addEventListener('touchend',e=>{
-    const dx=e.changedTouches[0].clientX-touchStartX;
-    const dy=e.changedTouches[0].clientY-touchStartY;
-    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>50){
-      if(dx<0)navNext();else navPrev();
-    }
-  },{passive:true});
-  return grid;
+  return h('div',{class:'mb-grid'},...cells);
 }
 
 // ── CRUD ───────────────────────────────────────────────────
