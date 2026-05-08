@@ -1234,10 +1234,15 @@ function render(){
 
 // 창 크기 변경 시 overflow 재계산
 let _wasMobile=isMobile();
+let _resizeTimer=null;
 window.addEventListener('resize',()=>{
-  const mob=isMobile();
-  if(mob!==_wasMobile){_wasMobile=mob;if(authUser)render();}
-  else if(!mob&&viewMode==='month')adjustMonthOverflow();
+  clearTimeout(_resizeTimer);
+  _resizeTimer=setTimeout(()=>{
+    if(modalMode)return; // 모달 열려 있으면 무시
+    const mob=isMobile();
+    if(mob!==_wasMobile){_wasMobile=mob;if(authUser)render();}
+    else if(!mob&&viewMode==='month')adjustMonthOverflow();
+  },300);
 });
 
 // ── 앱 시작 ─────────────────────────────────
