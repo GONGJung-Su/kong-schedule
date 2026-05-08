@@ -1233,7 +1233,12 @@ function render(){
 }
 
 // 창 크기 변경 시 overflow 재계산
-window.addEventListener('resize',()=>{if(authUser)render();});
+let _wasMobile=isMobile();
+window.addEventListener('resize',()=>{
+  const mob=isMobile();
+  if(mob!==_wasMobile){_wasMobile=mob;if(authUser)render();}
+  else if(!mob&&viewMode==='month')adjustMonthOverflow();
+});
 
 // ── 앱 시작 ─────────────────────────────────
 (function initApp(){
