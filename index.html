@@ -268,15 +268,20 @@ if(FB_CONFIGURED){
 
 // ── LOCAL AUTH ─────────────────────────────────────────────
 function getUsers(){
-  const stored=localStorage.getItem('ks_auth_users');
-  if(!stored){
-    const def=[{username:'admin',password:'8432',role:'admin'}];
-    localStorage.setItem('ks_auth_users',JSON.stringify(def));
-    return def;
+  let users=[];
+  try{const s=localStorage.getItem('ks_auth_users');users=s?JSON.parse(s):[];}catch{}
+  // admin 계정은 어느 브라우저에서도 항상 존재 보장
+  if(!Array.isArray(users))users=[];
+  if(!users.find(u=>u.username==='admin')){
+    users.unshift({username:'admin',password:'8432',role:'admin'});
+    localStorage.setItem('ks_auth_users',JSON.stringify(users));
   }
-  return JSON.parse(stored);
+  return users;
 }
-function saveUsers(u){localStorage.setItem('ks_auth_users',JSON.stringify(u));}
+function saveUsers(u){
+  localStorage.setItem('ks_auth_users',JSON.stringify(u));
+  if(fDb)fDb.ref('kong_app/users').set(u).catch(()=>{});
+}
 function getSession(){return JSON.parse(sessionStorage.getItem('ks_session')||'null');}
 function setSession(u){sessionStorage.setItem('ks_session',JSON.stringify(u));}
 function clearSession(){sessionStorage.removeItem('ks_session');}
@@ -302,12 +307,23 @@ function showLoginScreen(){
     if(!u||!p){errEl.textContent='사용자명과 비밀번호를 입력하세요.';errEl.style.display='block';return;}
     const s=doLogin(u,p);
     if(!s){errEl.textContent='사용자명 또는 비밀번호가 올바르지 않습니다.';errEl.style.display='block';pwEl.value='';return;}
-    // 로그인 성공 → 해당 사용자 일정 재로딩
+    // 로그인 성공 → localStorage 먼저 로딩
     events=ls('ev',[]);
     settings=ls('st',{showLunar:true,showHol:true});
     teams=ls('teams',[]);
     curTeam=ls('curTeam',null);
-    render();
+    // Firebase에서 최신 데이터 동기화
+    if(fDb){
+      btn.disabled=true;btn.textContent='동기화 중...';
+      Promise.all([
+        fDb.ref('kong_app/events/'+s.username).get(),
+        fDb.ref('kong_app/teams').get()
+      ]).then(([evSnap,tmSnap])=>{
+        if(evSnap.exists()&&Array.isArray(evSnap.val())){events=evSnap.val();ss('ev',events);}
+        if(tmSnap.exists()&&Array.isArray(tmSnap.val())){teams=tmSnap.val();ss('teams',teams);}
+        render();
+      }).catch(()=>render());
+    }else{render();}
   }
   pwEl.addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin();});
   unEl.addEventListener('keydown',e=>{if(e.key==='Enter')pwEl.focus();});
@@ -402,79 +418,16 @@ function ss(k,v){
   try{
     const key=(k==='ev'&&authUser)?'ks_ev_'+authUser.username:'ks_'+k;
     localStorage.setItem(key,JSON.stringify(v));
+    if(fDb){
+      if(k==='ev'&&authUser)fDb.ref('kong_app/events/'+authUser.username).set(v).catch(()=>{});
+      else if(k==='teams')fDb.ref('kong_app/teams').set(v).catch(()=>{});
+    }
   }catch{}
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
 
-// ── FIREBASE 함수들 ────────────────────────────────────────
-async function fbLoad(uid){
-  // Firebase에서 사용자 데이터 불러오기
-  try{
-    const snap=await fDb.ref(`u/${uid}`).get();
-    if(snap.exists()){
-      const d=snap.val();
-      if(d.ev){events=d.ev;localStorage.setItem('ks_ev',JSON.stringify(d.ev));}
-      if(d.st){settings=d.st;localStorage.setItem('ks_st',JSON.stringify(d.st));}
-      if(d.teams){teams=d.teams;localStorage.setItem('ks_teams',JSON.stringify(d.teams));}
-      if(d.curTeam!=null){curTeam=d.curTeam;localStorage.setItem('ks_curTeam',JSON.stringify(d.curTeam));}
-    }
-  }catch(e){console.warn('fbLoad error:',e);}
-}
-function fbSync(uid){
-  // 실시간 동기화: 다른 기기에서 변경 시 자동 반영
-  fDb.ref(`u/${uid}`).on('value',snap=>{
-    if(!snap.exists())return;
-    const d=snap.val();
-    if(d.ev){events=d.ev;localStorage.setItem('ks_ev',JSON.stringify(d.ev));}
-    if(d.st){settings=d.st;localStorage.setItem('ks_st',JSON.stringify(d.st));}
-    if(d.teams){teams=d.teams;localStorage.setItem('ks_teams',JSON.stringify(d.teams));}
-    if(d.curTeam!=null){curTeam=d.curTeam;localStorage.setItem('ks_curTeam',JSON.stringify(d.curTeam));}
-    render();
-  });
-}
-function fbLogin(){
-  if(!fAuth)return;
-  // 로딩 화면 표시
-  const root=document.getElementById('app');
-  root.innerHTML='';
-  root.appendChild(h('div',{class:'login-wrap'},
-    h('div',{class:'login-card'},
-      h('div',{class:'login-icon',style:{animation:'spin 1s linear infinite'}},'⏳'),
-      h('div',{class:'login-title'},'로그인 중...'),
-      h('div',{class:'login-sub'},'Google 계정 선택 화면으로 이동합니다.\n잠시만 기다려 주세요.'),
-      h('button',{class:'login-btn',style:{background:'#888',cursor:'default'},onClick:()=>renderLoginScreen()},
-        '❌ 취소'
-      )
-    )
-  ));
-  const provider=new firebase.auth.GoogleAuthProvider();
-  fAuth.signInWithRedirect(provider).catch(e=>{
-    toast('로그인 실패: '+e.message);
-    renderLoginScreen();
-  });
-}
-function fbLogout(){
-  if(!fAuth)return;
-  fAuth.signOut().catch(()=>{});
-}
-function renderLoginScreen(){
-  const root=document.getElementById('app');
-  root.innerHTML='';
-  root.appendChild(h('div',{class:'login-wrap'},
-    h('div',{class:'login-card'},
-      h('div',{class:'login-icon'},'📅'),
-      h('div',{class:'login-title'},'KONG\'S 일정 관리'),
-      h('div',{class:'login-sub'},'Google 계정으로 로그인하면\nPC와 모바일에서 일정을 동기화할 수 있어요.'),
-      h('button',{class:'login-btn',onClick:fbLogin},
-        h('span',{style:{fontSize:'1.1rem'}},'G'),
-        'Google로 로그인'
-      ),
-      !FB_CONFIGURED?h('div',{class:'login-cfg'},
-        '⚠️ Firebase 설정이 필요합니다.\nschedule-app.html 파일의 FB_CONFIG를\nFirebase 콘솔 값으로 교체해 주세요.'
-      ):null
-    )
-  ));
-}
+// ── FIREBASE 크로스브라우저 동기화 ────────────────────────────
+// saveUsers(), ss() 에서 firebase write, 로그인/시작 시 firebase read
 function fmt(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function parseD(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
 function fmtDisp(s){const d=parseD(s);return`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${DOWS[d.getDay()]})`;}
@@ -738,7 +691,7 @@ function renderTopbar(){
         authUser.role==='admin'?h('span',{class:'admin-badge'},'관리자'):null
       ):null,
       h('button',{class:'icon-btn',onClick:()=>{modalMode='settings';render();}},'⚙️ ',h('span',{class:'btn-lbl'},'설정')),
-      h('button',{class:'icon-btn',onClick:()=>{modalMode='team';render();}},'👥 ',h('span',{class:'btn-lbl'},'팀')),
+      h('button',{class:'icon-btn',style:{opacity:'0.4',cursor:'not-allowed',pointerEvents:'none'},title:'팀 기능 준비 중'},'👥 ',h('span',{class:'btn-lbl'},'팀')),
       h('button',{class:'icon-btn',style:{color:'#ef4444'},onClick:doLogout,title:'로그아웃'},'↩ 로그아웃'),
       h('div',{class:'view-toggle'},
         h('button',{class:'vt-btn'+(viewMode==='day'?' active':''),onClick:()=>setView('day')},'일'),
@@ -1228,7 +1181,36 @@ function render(){
 window.addEventListener('resize',()=>{if(viewMode==='month')adjustMonthOverflow();});
 
 // ── 앱 시작 ─────────────────────────────────
-if(authUser){render();}else{showLoginScreen();}
+(function initApp(){
+  if(fDb){
+    // Firebase에서 사용자 목록 로드 → localStorage와 병합
+    fDb.ref('kong_app/users').get().then(snap=>{
+      if(snap.exists()){
+        const fbUsers=snap.val()||[];
+        if(Array.isArray(fbUsers)&&fbUsers.length>0){
+          // admin은 항상 보장
+          if(!fbUsers.find(u=>u.username==='admin'))fbUsers.unshift({username:'admin',password:'8432',role:'admin'});
+          localStorage.setItem('ks_auth_users',JSON.stringify(fbUsers));
+        }
+      }
+      if(authUser){
+        // 세션 존재 → Firebase에서 events/teams 로드
+        Promise.all([
+          fDb.ref('kong_app/events/'+authUser.username).get(),
+          fDb.ref('kong_app/teams').get()
+        ]).then(([evSnap,tmSnap])=>{
+          if(evSnap.exists()&&Array.isArray(evSnap.val())){events=evSnap.val();ss('ev',events);}
+          if(tmSnap.exists()&&Array.isArray(tmSnap.val())){teams=tmSnap.val();ss('teams',teams);}
+          render();
+        }).catch(()=>render());
+      }else{showLoginScreen();}
+    }).catch(()=>{
+      if(authUser){render();}else{showLoginScreen();}
+    });
+  }else{
+    if(authUser){render();}else{showLoginScreen();}
+  }
+})();
 </script>
 </body>
 </html>
