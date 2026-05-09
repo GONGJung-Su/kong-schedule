@@ -241,6 +241,20 @@ select.fi{cursor:pointer}
   .form-row{grid-template-columns:1fr}
   .modal-body{padding:12px 14px}
 }
+/* 모바일 하루 일정 바텀시트 */
+.mb-sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:8000;display:flex;align-items:flex-end}
+.mb-sheet{background:white;border-radius:16px 16px 0 0;width:100%;max-height:70vh;display:flex;flex-direction:column;animation:slideUp .22s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mb-sheet-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid #e5e7eb;flex-shrink:0}
+.mb-sheet-title{font-size:.96rem;font-weight:700;color:#111827}
+.mb-sheet-close{background:none;border:none;font-size:1.2rem;color:#9ca3af;cursor:pointer;padding:2px 6px;line-height:1}
+.mb-sheet-body{overflow-y:auto;padding:8px 12px 24px;display:flex;flex-direction:column;gap:6px}
+.mb-sheet-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:background .1s}
+.mb-sheet-item:hover,.mb-sheet-item:active{background:#f3f4f6}
+.mb-sheet-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.mb-sheet-info{flex:1;min-width:0}
+.mb-sheet-ev-title{font-size:.88rem;font-weight:600;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mb-sheet-ev-time{font-size:.75rem;color:#6b7280;margin-top:1px}
 </style>
 <!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -713,7 +727,11 @@ function renderMobileCell({d,ds},ebd){
     ),
     h('div',{class:'mb-evs'},
       ...dayEvs.slice(0,3).map(e=>makePill(e)),
-      dayEvs.length>3?h('div',{class:'more-ev',style:{fontSize:'.7rem',color:'#6b7280',paddingLeft:'2px'}},`+${dayEvs.length-3}개 더`):null
+      dayEvs.length>3?(()=>{
+        const more=h('div',{class:'more-ev',style:{fontSize:'.7rem',color:'#4f46e5',paddingLeft:'2px',cursor:'pointer'}},`+${dayEvs.length-3}개 더`);
+        more.addEventListener('click',e=>{e.stopPropagation();showMobileDaySheet(ds,dayEvs);});
+        return more;
+      })():null
     )
   );
   cell.addEventListener('dblclick',ev=>{ev.stopPropagation();openAdd(ds);});
@@ -736,6 +754,47 @@ function renderMobile2Week(){
     cells.push(renderMobileCell(allDays[i+7],ebd));
   }
   return h('div',{class:'mb-grid'},...cells);
+}
+
+// ── 모바일 하루 일정 바텀시트 ────────────────────────────────
+function showMobileDaySheet(ds,dayEvs){
+  const d=parseD(ds);
+  const dow=['일','월','화','수','목','금','토'][d.getDay()];
+  const title=`${d.getMonth()+1}월 ${d.getDate()}일 (${dow})`;
+  const overlay=document.createElement('div');
+  overlay.className='mb-sheet-overlay';
+  function close(){document.body.removeChild(overlay);}
+  overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
+  const items=dayEvs.map(e=>{
+    const color=e.color||'#4f46e5';
+    const timeStr=e.startTime?(e.endTime?`${e.startTime} ~ ${e.endTime}`:e.startTime):'';
+    const item=document.createElement('div');
+    item.className='mb-sheet-item';
+    item.innerHTML=`<div class="mb-sheet-dot" style="background:${color}"></div>`
+      +`<div class="mb-sheet-info">`
+      +`<div class="mb-sheet-ev-title">${e.title}</div>`
+      +(timeStr?`<div class="mb-sheet-ev-time">${timeStr}</div>`:'')
+      +`</div>`;
+    item.addEventListener('click',()=>{close();openDetail(e);});
+    return item;
+  });
+  const sheet=document.createElement('div');
+  sheet.className='mb-sheet';
+  const hd=document.createElement('div');
+  hd.className='mb-sheet-hd';
+  hd.innerHTML=`<span class="mb-sheet-title">${title} · ${dayEvs.length}개</span>`;
+  const closeBtn=document.createElement('button');
+  closeBtn.className='mb-sheet-close';
+  closeBtn.textContent='✕';
+  closeBtn.addEventListener('click',close);
+  hd.appendChild(closeBtn);
+  const body=document.createElement('div');
+  body.className='mb-sheet-body';
+  items.forEach(i=>body.appendChild(i));
+  sheet.appendChild(hd);
+  sheet.appendChild(body);
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
 }
 
 // ── CRUD ───────────────────────────────────────────────────
