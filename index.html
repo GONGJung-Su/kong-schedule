@@ -278,6 +278,8 @@ const FB_CONFIG = {
 };
 const FB_CONFIGURED = FB_CONFIG.apiKey !== "YOUR_API_KEY";
 let fApp=null,fAuth=null,fDb=null,fUid=null;
+let _fbPause=false; // 내 기기 저장 시 리스너 일시 중지 플래그
+let _fbListenerRef=null; // 현재 활성 리스너 ref
 if(FB_CONFIGURED){
   try{
     fApp=firebase.initializeApp(FB_CONFIG);
@@ -305,6 +307,34 @@ function saveUsers(u){
 function getSession(){return JSON.parse(sessionStorage.getItem('ks_session')||'null');}
 function setSession(u){sessionStorage.setItem('ks_session',JSON.stringify(u));}
 function clearSession(){sessionStorage.removeItem('ks_session');}
+
+// ── Firebase 실시간 리스너 ──────────────────────────────────
+function startFbListener(username){
+  if(!fDb||!username)return;
+  stopFbListener(); // 기존 리스너 제거
+  _fbListenerRef=fDb.ref('kong_app/events/'+username);
+  _fbListenerRef.on('value',snap=>{
+    if(_fbPause)return; // 내 기기 저장 중이면 무시
+    if(!snap.exists())return;
+    const fbEvs=snap.val();
+    if(!Array.isArray(fbEvs))return;
+    const localEvs=ls('ev',[]);
+    // Firebase 기준으로 병합, 로컬 사진 보존
+    const merged=fbEvs.map(fe=>{
+      const lo=localEvs.find(l=>l.id===fe.id);
+      return(lo&&lo.photo)?{...fe,photo:lo.photo}:fe;
+    });
+    // 실제 변경이 있을 때만 업데이트
+    if(JSON.stringify(merged)===JSON.stringify(events))return;
+    events=merged;
+    try{localStorage.setItem('ks_ev_'+username,JSON.stringify(merged));}catch{}
+    if(authUser)render();
+  });
+}
+function stopFbListener(){
+  if(_fbListenerRef){_fbListenerRef.off('value');_fbListenerRef=null;}
+}
+
 let authUser=getSession();
 function doLogin(username,password){
   const users=getUsers();
@@ -313,7 +343,7 @@ function doLogin(username,password){
   const s={username:u.username,role:u.role};
   setSession(s);authUser=s;return s;
 }
-function doLogout(){clearSession();authUser=null;events=[];teams=[];curTeam=null;showLoginScreen();}
+function doLogout(){clearSession();stopFbListener();authUser=null;events=[];teams=[];curTeam=null;showLoginScreen();}
 function isAdmin(){return authUser&&authUser.role==='admin';}
 function showLoginScreen(){
   const root=document.getElementById('app');
@@ -356,7 +386,8 @@ function showLoginScreen(){
         }
         if(tmSnap.exists()&&Array.isArray(tmSnap.val())){teams=tmSnap.val();ss('teams',teams);}
         render();
-      }).catch(()=>render());
+        startFbListener(s.username); // 로그인 후 실시간 리스너 시작
+      }).catch(()=>{render();startFbListener(s.username);});
     }else{render();}
   }
   pwEl.addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin();});
@@ -455,6 +486,9 @@ function ss(k,v){
     if(fDb){
       if(k==='ev'&&authUser){
         // Firebase에는 사진 제외 (용량 문제)
+        // 내 저장에 의해 리스너가 반응하지 않도록 잠시 중지
+        _fbPause=true;clearTimeout(_fbPause._t);
+        _fbPause._t=setTimeout(()=>{_fbPause=false;},3000);
         const noPhoto=v.map(e=>({...e,photo:null}));
         fDb.ref('kong_app/events/'+authUser.username).set(noPhoto).catch(()=>{});
       }else if(k==='teams')fDb.ref('kong_app/teams').set(v).catch(()=>{});
@@ -1486,12 +1520,22 @@ window.addEventListener('popstate',()=>{
         if(localUsers.length>0)fDb.ref('kong_app/users').set(localUsers).catch(()=>{});
       }
       if(authUser){
-        // 새로고침: 로컬 데이터 그대로 사용 (Firebase 덮어쓰기 금지 → 사진 보존)
         if(curUser.name!==authUser.username){curUser.name=authUser.username;ss('curUser',curUser);}
-        render();
+        // 새로고침: Firebase에서 최신 일정 가져와 로컬 사진과 병합
+        fDb.ref('kong_app/events/'+authUser.username).get().then(evSnap=>{
+          if(evSnap.exists()&&Array.isArray(evSnap.val())){
+            const fbEvs=evSnap.val();
+            const localEvs=ls('ev',[]);
+            const merged=fbEvs.map(fe=>{const lo=localEvs.find(l=>l.id===fe.id);return(lo&&lo.photo)?{...fe,photo:lo.photo}:fe;});
+            events=merged;
+            try{localStorage.setItem('ks_ev_'+authUser.username,JSON.stringify(merged));}catch{}
+          }
+          render();
+          startFbListener(authUser.username); // 실시간 리스너 시작
+        }).catch(()=>{render();startFbListener(authUser.username);});
       }else{showLoginScreen();}
     }).catch(()=>{
-      if(authUser){render();}else{showLoginScreen();}
+      if(authUser){render();startFbListener(authUser.username);}else{showLoginScreen();}
     });
   }else{
     if(authUser){render();}else{showLoginScreen();}
