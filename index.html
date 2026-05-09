@@ -327,10 +327,8 @@ function showLoginScreen(){
         fDb.ref('kong_app/teams').get()
       ]).then(([evSnap,tmSnap])=>{
         if(evSnap.exists()&&Array.isArray(evSnap.val())){
-          const fbEvs=evSnap.val();
-          const localEvs=ls('ev',[]);
-          // Firebase 데이터 기준, 로컬에 사진 있으면 유지
-          events=fbEvs.map(fe=>{const lo=localEvs.find(l=>l.id===fe.id);return lo?.photo?{...fe,photo:lo.photo}:fe;});
+          // Firebase 이벤트 로드 후 별도 저장된 사진 자동 재결합 (attachPhotos가 처리)
+          events=attachPhotos(evSnap.val());
           ss('ev',events);
         }
         if(tmSnap.exists()&&Array.isArray(tmSnap.val())){teams=tmSnap.val();ss('teams',teams);}
@@ -421,22 +419,38 @@ let selDate=todayStr,viewMode='month';
 let modalMode=null,editEv=null,detailEv=null,selEvId=null;
 let form=ef();
 
+// ── 사진 별도 저장 (이벤트 배열과 분리) ─────────────────────
+function attachPhotos(evs){
+  return evs.map(e=>{
+    if(!e.id)return e;
+    const p=localStorage.getItem('ks_photo_'+e.id);
+    return p?{...e,photo:p}:e;
+  });
+}
+function detachPhotos(evs){
+  evs.forEach(e=>{if(e.id&&e.photo)try{localStorage.setItem('ks_photo_'+e.id,e.photo);}catch{}});
+  return evs.map(e=>({...e,photo:null}));
+}
+function removePhoto(id){try{localStorage.removeItem('ks_photo_'+id);}catch{}}
 function ls(k,d){
   try{
     const key=(k==='ev'&&authUser)?'ks_ev_'+authUser.username:'ks_'+k;
-    const v=localStorage.getItem(key);return v?JSON.parse(v):d;
+    const v=localStorage.getItem(key);
+    if(!v)return d;
+    const parsed=JSON.parse(v);
+    return(k==='ev')?attachPhotos(parsed):parsed;
   }catch{return d;}
 }
 function ss(k,v){
   try{
     const key=(k==='ev'&&authUser)?'ks_ev_'+authUser.username:'ks_'+k;
-    localStorage.setItem(key,JSON.stringify(v));
-    if(fDb){
-      if(k==='ev'&&authUser){
-        // 사진은 용량이 커서 Firebase 제외, 로컬에만 보관
-        const noPhoto=v.map(e=>({...e,photo:null}));
-        fDb.ref('kong_app/events/'+authUser.username).set(noPhoto).catch(()=>{});
-      }else if(k==='teams')fDb.ref('kong_app/teams').set(v).catch(()=>{});
+    if(k==='ev'){
+      const noPhoto=detachPhotos(v); // 사진은 별도 키에 저장
+      localStorage.setItem(key,JSON.stringify(noPhoto));
+      if(fDb&&authUser)fDb.ref('kong_app/events/'+authUser.username).set(noPhoto).catch(()=>{});
+    }else{
+      localStorage.setItem(key,JSON.stringify(v));
+      if(fDb&&k==='teams')fDb.ref('kong_app/teams').set(v).catch(()=>{});
     }
   }catch{}
 }
@@ -743,7 +757,7 @@ function saveEv(){
   }
   ss('ev',events);modalMode=null;render();
 }
-function delEv(id){events=events.filter(e=>e.id!==id);ss('ev',events);modalMode=null;toast('삭제되었습니다 🗑️');render();}
+function delEv(id){removePhoto(id);events=events.filter(e=>e.id!==id);ss('ev',events);modalMode=null;toast('삭제되었습니다 🗑️');render();}
 function toast(msg){const el=document.createElement('div');el.className='toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2600);}
 
 // ── H HELPER ───────────────────────────────────────────────
@@ -1361,9 +1375,7 @@ window.addEventListener('popstate',()=>{
           fDb.ref('kong_app/teams').get()
         ]).then(([evSnap,tmSnap])=>{
           if(evSnap.exists()&&Array.isArray(evSnap.val())){
-            const fbEvs=evSnap.val();
-            const localEvs=ls('ev',[]);
-            events=fbEvs.map(fe=>{const lo=localEvs.find(l=>l.id===fe.id);return lo?.photo?{...fe,photo:lo.photo}:fe;});
+            events=attachPhotos(evSnap.val());
             ss('ev',events);
           }
           if(tmSnap.exists()&&Array.isArray(tmSnap.val())){teams=tmSnap.val();ss('teams',teams);}
