@@ -226,13 +226,13 @@ select.fi{cursor:pointer}
 .mb-day-hd{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:28px;padding-top:1px}
 .mb-dow{font-size:.68rem;font-weight:700;letter-spacing:.3px;line-height:1.2}
 .mb-dnum{font-size:.82rem;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.mb-evs{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding-top:1px}
+.mb-evs{flex:1;min-width:0;display:flex;flex-direction:column;gap:0px;padding-top:1px;overflow:hidden}
 .mb-dnum.is-today{background:#4f46e5;color:white}
 .mb-dnum.is-red{color:#ef4444}
 .mb-dnum.is-sat{color:#3b82f6}
 /* 모바일 일정 글씨 */
 @media(max-width:700px){
-  .ev-pill{font-size:.8rem;padding:2px 5px;}
+  .ev-pill{font-size:.8rem;padding:1px 4px;margin-bottom:0px;line-height:1.3;}
 }
 /* 모달 - 모바일 */
 @media(max-width:700px){
@@ -713,7 +713,7 @@ function renderMobileCell({d,ds},ebd){
     ),
     h('div',{class:'mb-evs'},
       ...dayEvs.slice(0,3).map(e=>makePill(e)),
-      dayEvs.length>3?h('div',{class:'more-ev'},`+${dayEvs.length-3}`):null
+      dayEvs.length>3?h('div',{class:'more-ev',style:{fontSize:'.7rem',color:'#6b7280',paddingLeft:'2px'}},`+${dayEvs.length-3}개 더`):null
     )
   );
   cell.addEventListener('dblclick',ev=>{ev.stopPropagation();openAdd(ds);});
