@@ -326,7 +326,13 @@ function showLoginScreen(){
         fDb.ref('kong_app/events/'+s.username).get(),
         fDb.ref('kong_app/teams').get()
       ]).then(([evSnap,tmSnap])=>{
-        if(evSnap.exists()&&Array.isArray(evSnap.val())){events=evSnap.val();ss('ev',events);}
+        if(evSnap.exists()&&Array.isArray(evSnap.val())){
+          const fbEvs=evSnap.val();
+          const localEvs=ls('ev',[]);
+          // Firebase 데이터 기준, 로컬에 사진 있으면 유지
+          events=fbEvs.map(fe=>{const lo=localEvs.find(l=>l.id===fe.id);return lo?.photo?{...fe,photo:lo.photo}:fe;});
+          ss('ev',events);
+        }
         if(tmSnap.exists()&&Array.isArray(tmSnap.val())){teams=tmSnap.val();ss('teams',teams);}
         render();
       }).catch(()=>render());
@@ -426,8 +432,11 @@ function ss(k,v){
     const key=(k==='ev'&&authUser)?'ks_ev_'+authUser.username:'ks_'+k;
     localStorage.setItem(key,JSON.stringify(v));
     if(fDb){
-      if(k==='ev'&&authUser)fDb.ref('kong_app/events/'+authUser.username).set(v).catch(()=>{});
-      else if(k==='teams')fDb.ref('kong_app/teams').set(v).catch(()=>{});
+      if(k==='ev'&&authUser){
+        // 사진은 용량이 커서 Firebase 제외, 로컬에만 보관
+        const noPhoto=v.map(e=>({...e,photo:null}));
+        fDb.ref('kong_app/events/'+authUser.username).set(noPhoto).catch(()=>{});
+      }else if(k==='teams')fDb.ref('kong_app/teams').set(v).catch(()=>{});
     }
   }catch{}
 }
@@ -549,9 +558,24 @@ function expandEv(e){
   }
   return r;
 }
+function lunarToSolar(ly,lm,ld){
+  const data=LY[ly];if(!data)return null;
+  const ny=parseD(data.ny);
+  const{m,lp,ld:lpd}=data;
+  let offset=0;
+  for(let i=0;i<lm-1;i++){
+    offset+=m[i];
+    if(lp>0&&(i+1)===lp)offset+=lpd; // 윤달이 이달보다 앞에 있으면 더하기
+  }
+  if(ld>m[lm-1])return null; // 해당 달에 그 날이 없으면 skip
+  offset+=ld-1;
+  const sol=new Date(ny.getTime()+offset*86400000);
+  return fmt(sol);
+}
 function recurDates(e,s,en){
   if(!e.recur)return[];
   const r=e.recur,dates=[];let cur=e.date,cnt=0;
+  const origLunar=(r.type==='monthly_lunar'||r.type==='yearly_lunar')?solarToLunar(e.date):null;
   while(cur<=en&&cnt<400){
     cnt++;
     if(cur>=s&&cur>=e.date&&cur!==e.date)dates.push(cur);
@@ -559,6 +583,19 @@ function recurDates(e,s,en){
     else if(r.type==='weekly')cur=addD(cur,7);
     else if(r.type==='monthly'){const d=parseD(cur);d.setMonth(d.getMonth()+1);cur=fmt(d);}
     else if(r.type==='yearly'){const d=parseD(cur);d.setFullYear(d.getFullYear()+1);cur=fmt(d);}
+    else if(r.type==='monthly_lunar'){
+      if(!origLunar){break;}
+      const cl=solarToLunar(cur);if(!cl){cur=addD(cur,30);continue;}
+      let ny2=cl.y,nm=cl.mo+1;if(nm>12){nm=1;ny2++;}
+      const ns=lunarToSolar(ny2,nm,origLunar.day);
+      cur=ns||addD(cur,30);
+    }
+    else if(r.type==='yearly_lunar'){
+      if(!origLunar){break;}
+      const cl=solarToLunar(cur);if(!cl){cur=addD(cur,365);continue;}
+      const ns=lunarToSolar(cl.y+1,origLunar.mo,origLunar.day);
+      cur=ns||addD(cur,365);
+    }
     else break;
     if(r.until&&cur>r.until)break;
     if(r.count&&cnt>=r.count)break;
@@ -903,7 +940,6 @@ function render2Week(){
     );
   }
   return h('div',{},
-    h('div',{class:'cal-hdr'},...DOWS.map((d,i)=>h('div',{class:'cal-hdr-cell'+(i===0?' h-sun':i===6?' h-sat':'')},d))),
     weekBlock(allDays.slice(0,7)),
     weekBlock(allDays.slice(7))
   );
@@ -1324,7 +1360,12 @@ window.addEventListener('popstate',()=>{
           fDb.ref('kong_app/events/'+authUser.username).get(),
           fDb.ref('kong_app/teams').get()
         ]).then(([evSnap,tmSnap])=>{
-          if(evSnap.exists()&&Array.isArray(evSnap.val())){events=evSnap.val();ss('ev',events);}
+          if(evSnap.exists()&&Array.isArray(evSnap.val())){
+            const fbEvs=evSnap.val();
+            const localEvs=ls('ev',[]);
+            events=fbEvs.map(fe=>{const lo=localEvs.find(l=>l.id===fe.id);return lo?.photo?{...fe,photo:lo.photo}:fe;});
+            ss('ev',events);
+          }
           if(tmSnap.exists()&&Array.isArray(tmSnap.val())){teams=tmSnap.val();ss('teams',teams);}
           render();
         }).catch(()=>render());
