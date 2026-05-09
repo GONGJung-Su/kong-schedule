@@ -162,6 +162,12 @@ select.fi{cursor:pointer}
 .bp{background:#4f46e5;color:white}.bp:hover{background:#4338ca}
 .bs{background:#f3f4f6;color:#374151}.bs:hover{background:#e5e7eb}
 .bd{background:#fee2e2;color:#dc2626}.bd:hover{background:#fecaca}
+/* autocomplete */
+.ac-wrap{position:relative;width:100%}
+.ac-drop{position:absolute;top:100%;left:0;right:0;background:white;border:1.5px solid #4f46e5;border-top:none;border-radius:0 0 8px 8px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:9999;max-height:180px;overflow-y:auto}
+.ac-item{padding:8px 11px;font-size:.85rem;color:#374151;cursor:pointer;border-bottom:1px solid #f3f4f6}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item.ac-active{background:#ede9fe;color:#4f46e5}
 /* detail */
 .det-bar{height:4px;border-radius:13px 13px 0 0}
 .det-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;font-size:.82rem;color:#374151}
@@ -1021,10 +1027,39 @@ function renderAddEdit(){
       h('div',{class:'modal-body'},
         // title
         h('div',{class:'fg'},h('label',{class:'fl'},'제목 *'),(()=>{
+          const wrap=document.createElement('div');wrap.className='ac-wrap';
           const inp=h('input',{class:'fi',placeholder:'일정 제목',value:form.title});
-          inp.addEventListener('input',e=>{form.title=e.target.value;});
-          inp.addEventListener('keydown',e=>{if(e.key==='Enter')saveEv();});
-          setTimeout(()=>inp.focus(),50);return inp;
+          wrap.appendChild(inp);
+          // 기존 일정 제목 목록 (중복 제거)
+          const titles=[...new Set(events.map(e=>e.title).filter(Boolean))];
+          let acIdx=-1;
+          function closeDrop(){const d=wrap.querySelector('.ac-drop');if(d)d.remove();acIdx=-1;}
+          function showDrop(q){
+            closeDrop();
+            if(!q)return;
+            const matches=titles.filter(t=>t.toLowerCase().includes(q.toLowerCase())&&t!==q);
+            if(!matches.length)return;
+            const drop=document.createElement('div');drop.className='ac-drop';
+            matches.slice(0,8).forEach((t,i)=>{
+              const item=document.createElement('div');item.className='ac-item';
+              // 매칭 부분 강조
+              const idx=t.toLowerCase().indexOf(q.toLowerCase());
+              item.innerHTML=t.slice(0,idx)+'<strong>'+t.slice(idx,idx+q.length)+'</strong>'+t.slice(idx+q.length);
+              item.addEventListener('mousedown',e=>{e.preventDefault();inp.value=t;form.title=t;closeDrop();inp.focus();});
+              drop.appendChild(item);
+            });
+            wrap.appendChild(drop);
+          }
+          inp.addEventListener('input',e=>{form.title=e.target.value;showDrop(e.target.value);acIdx=-1;});
+          inp.addEventListener('keydown',e=>{
+            const items=wrap.querySelectorAll('.ac-item');
+            if(e.key==='ArrowDown'){e.preventDefault();acIdx=Math.min(acIdx+1,items.length-1);items.forEach((it,i)=>it.classList.toggle('ac-active',i===acIdx));}
+            else if(e.key==='ArrowUp'){e.preventDefault();acIdx=Math.max(acIdx-1,0);items.forEach((it,i)=>it.classList.toggle('ac-active',i===acIdx));}
+            else if(e.key==='Enter'){if(acIdx>=0&&items[acIdx]){inp.value=items[acIdx].textContent;form.title=inp.value;closeDrop();}else{closeDrop();saveEv();}}
+            else if(e.key==='Escape'){closeDrop();}
+          });
+          inp.addEventListener('blur',()=>setTimeout(closeDrop,150));
+          setTimeout(()=>inp.focus(),50);return wrap;
         })()),
         // multi-day toggle
         h('label',{class:'mtog'},(()=>{
