@@ -428,7 +428,13 @@ function attachPhotos(evs){
   });
 }
 function detachPhotos(evs){
-  evs.forEach(e=>{if(e.id&&e.photo)try{localStorage.setItem('ks_photo_'+e.id,e.photo);}catch{}});
+  evs.forEach(e=>{
+    if(e.id&&e.photo)try{
+      localStorage.setItem('ks_photo_'+e.id,e.photo);
+    }catch(err){
+      if(err.name==='QuotaExceededError')toast('⚠️ 저장공간 부족으로 사진을 저장할 수 없습니다.');
+    }
+  });
   return evs.map(e=>({...e,photo:null}));
 }
 function removePhoto(id){try{localStorage.removeItem('ks_photo_'+id);}catch{}}
@@ -758,6 +764,24 @@ function saveEv(){
   ss('ev',events);modalMode=null;render();
 }
 function delEv(id){removePhoto(id);events=events.filter(e=>e.id!==id);ss('ev',events);modalMode=null;toast('삭제되었습니다 🗑️');render();}
+function compressImage(file,maxW=1024,quality=0.75){
+  return new Promise(resolve=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.width,h=img.height;
+        if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+        const canvas=document.createElement('canvas');
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',quality));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 function toast(msg){const el=document.createElement('div');el.className='toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2600);}
 
 // ── H HELPER ───────────────────────────────────────────────
@@ -1079,7 +1103,7 @@ function renderAddEdit(){
                   const fi=document.createElement('input');fi.type='file';fi.accept='image/*';
                   fi.addEventListener('change',e=>{
                     const f=e.target.files[0];if(!f)return;
-                    const r=new FileReader();r.onload=ev=>{form.photo=ev.target.result;renderModal();};r.readAsDataURL(f);
+                    compressImage(f).then(dataUrl=>{form.photo=dataUrl;renderModal();});
                   });fi.click();
                 });return area;
               })()
