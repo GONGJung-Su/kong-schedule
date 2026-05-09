@@ -336,9 +336,8 @@ function showLoginScreen(){
           const fbEvs=evSnap.val();
           const localEvs=ls('ev',[]);
           // Firebase 기준으로 병합하되 로컬 사진은 유지
+          // Firebase가 기준(삭제 포함), 로컬 사진만 보존
           events=fbEvs.map(fe=>{const lo=localEvs.find(l=>l.id===fe.id);return(lo&&lo.photo)?{...fe,photo:lo.photo}:fe;});
-          // 로컬에만 있는 이벤트(Firebase 미동기화)도 유지
-          localEvs.forEach(le=>{if(!events.find(e=>e.id===le.id))events.push(le);});
           ss('ev',events);
         }
         if(tmSnap.exists()&&Array.isArray(tmSnap.val())){teams=tmSnap.val();ss('teams',teams);}
