@@ -1445,15 +1445,26 @@ function showExitConfirm(){
       ),
       h('div',{class:'modal-ft',style:{justifyContent:'center',gap:'8px'}},
         h('button',{class:'btn bs',onClick:()=>ov.remove()},'아니오'),
-        h('button',{class:'btn bd',onClick:()=>{ov.remove();window.history.go(-2);}},'종료')
+        h('button',{class:'btn bd',onClick:()=>{ov.remove();window.history.back();setTimeout(()=>window.history.back(),100);}},'종료')
       )
     )
   );
   document.body.appendChild(ov);
 }
-window.history.pushState(null,'',location.href);
+// 뒤로가기 가로채기 (Android 대응)
+function _pushFakeState(){window.history.pushState({app:true},'',location.href);}
+_pushFakeState();
 window.addEventListener('popstate',()=>{
-  window.history.pushState(null,'',location.href);
+  _pushFakeState(); // 항상 스택 유지
+  // 1) 모달 열려있으면 → 모달 닫기
+  if(modalMode){closeModal();return;}
+  // 2) 바텀시트 열려있으면 → 시트 닫기
+  const sheet=document.querySelector('.mb-sheet-overlay');
+  if(sheet){sheet.remove();return;}
+  // 3) 오버레이/팝업 닫기
+  const pop=document.querySelector('.more-pop-float');
+  if(pop){pop.remove();return;}
+  // 4) 아무것도 없으면 → 종료 확인
   showExitConfirm();
 });
 
