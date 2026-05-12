@@ -60,26 +60,46 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans
 .no-up{font-size:.74rem;color:#9ca3af;text-align:center;padding:10px}
 .team-indicator{font-size:.7rem;padding:3px 8px;border-radius:10px;background:#ede9fe;color:#4f46e5;font-weight:600;text-align:center}
 /* BOARD */
-.board-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden}
-.board-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:white}
-.board-title-bar{font-size:.95rem;font-weight:700;color:#111827}
-.board-list{flex:1;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:6px}
-.board-item{background:white;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;cursor:pointer;transition:box-shadow .1s}
+.board-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden;background:#f3f4f6}
+.board-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:white}
+.board-title-bar{font-size:.95rem;font-weight:700;color:#111827;display:flex;align-items:center;gap:6px}
+.board-body{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+/* 공지 영역 (회색) */
+.board-notice-zone{background:#f0f0f0;border-bottom:2px solid #e5e7eb;padding:12px 20px;flex-shrink:0}
+.board-notice-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.board-notice-label{font-size:.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:4px}
+.board-notice-list{display:flex;flex-direction:column;gap:5px}
+.board-notice-item{background:#e8e8e8;border-radius:6px;padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .1s}
+.board-notice-item:hover{background:#dcdcdc}
+.board-notice-badge{font-size:.66rem;font-weight:700;color:white;background:#6b7280;padding:1px 6px;border-radius:3px;flex-shrink:0}
+.board-notice-title{font-size:.84rem;font-weight:600;color:#374151;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.board-notice-meta{font-size:.68rem;color:#9ca3af;flex-shrink:0}
+.board-notice-empty{font-size:.78rem;color:#9ca3af;text-align:center;padding:10px 0}
+/* 일반 게시글 영역 */
+.board-general-zone{flex:1;padding:12px 20px;display:flex;flex-direction:column;gap:6px}
+.board-general-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.board-general-label{font-size:.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.6px}
+.board-item{background:white;border:1px solid #e5e7eb;border-radius:8px;padding:10px 16px;cursor:pointer;transition:box-shadow .1s;display:flex;align-items:center;gap:10px}
 .board-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.board-item-title{font-size:.88rem;font-weight:600;color:#1f2937;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.board-item-meta{font-size:.72rem;color:#9ca3af}
-.board-empty{text-align:center;padding:40px 0;color:#9ca3af;font-size:.84rem}
-.board-detail-wrap{display:flex;flex-direction:column;height:100%}
-.board-detail-hd{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid #e5e7eb;flex-shrink:0}
-.board-detail-title{font-size:.96rem;font-weight:700;color:#111827;flex:1}
-.board-detail-meta{font-size:.74rem;color:#9ca3af;padding:8px 16px;border-bottom:1px solid #f3f4f6;flex-shrink:0}
-.board-detail-body{flex:1;overflow-y:auto;padding:14px 16px;font-size:.86rem;color:#374151;line-height:1.7;white-space:pre-wrap}
-.board-post-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:5000;display:flex;align-items:center;justify-content:center;padding:20px}
-.board-post-modal{background:white;border-radius:12px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:0;overflow:hidden}
-.board-post-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #e5e7eb}
-.board-post-body{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
-.board-post-ft{display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid #e5e7eb}
+.board-item-body{flex:1;min-width:0}
+.board-item-title{font-size:.86rem;font-weight:600;color:#1f2937;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.board-item-meta{font-size:.71rem;color:#9ca3af}
+.board-empty{text-align:center;padding:24px 0;color:#9ca3af;font-size:.82rem}
+/* 글쓰기 폼 */
+.board-write-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden;background:white}
+.board-write-hd{display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid #e5e7eb;flex-shrink:0}
+.board-write-body{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.board-write-ft{display:flex;justify-content:flex-end;gap:8px;padding:10px 20px;border-top:1px solid #e5e7eb;flex-shrink:0}
+/* 상세보기 */
+.board-detail-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden;background:white}
+.board-detail-hd{display:flex;align-items:center;gap:8px;padding:12px 20px;border-bottom:1px solid #e5e7eb;flex-shrink:0}
+.board-detail-title{font-size:1rem;font-weight:700;color:#111827;flex:1}
+.board-detail-meta{font-size:.74rem;color:#9ca3af;padding:8px 20px;border-bottom:1px solid #f0f0f0;flex-shrink:0}
+.board-detail-body{flex:1;overflow-y:auto;padding:16px 20px;font-size:.86rem;color:#374151;line-height:1.8;white-space:pre-wrap}
 .board-post-input{width:100%;border:1px solid #d1d5db;border-radius:6px;padding:8px 10px;font-size:.84rem;font-family:inherit;resize:none}
+.board-cat-sel{display:flex;gap:10px;margin-bottom:4px}
+.board-cat-btn{padding:5px 14px;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;border:1px solid #d1d5db;background:white;color:#6b7280;transition:all .15s}
+.board-cat-btn.active{background:#4f46e5;color:white;border-color:#4f46e5}
 
 /* CALENDAR */
 .cal-hdr{display:grid;grid-template-columns:repeat(7,1fr);background:white;border-bottom:1px solid #e5e7eb;flex-shrink:0}
@@ -366,6 +386,74 @@ function doLogin(username,password){
 }
 function doLogout(){clearSession();stopFbListener();authUser=null;events=[];teams=[];curTeam=null;showLoginScreen();}
 function isAdmin(){return authUser&&authUser.role==='admin';}
+function showLoginBoard(){
+  loadBoard();
+  const root=document.getElementById('app');
+  root.innerHTML='';
+  const dtFmt=iso=>{const dt=new Date(iso);return`${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()}`;};
+  const dtFull=iso=>{const dt=new Date(iso);return`${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;};
+  function renderBoardPage(view){
+    root.innerHTML='';
+    const topbar=h('div',{style:{background:'white',borderBottom:'1px solid #e5e7eb',display:'flex',alignItems:'center',height:'50px',padding:'0 20px',gap:'10px',boxShadow:'0 1px 3px rgba(0,0,0,.06)',flexShrink:0}},
+      h('button',{style:{background:'none',border:'1px solid #e5e7eb',padding:'5px 11px',borderRadius:'6px',cursor:'pointer',fontSize:'.82rem',color:'#374151'},onClick:()=>showLoginScreen()},'← 로그인'),
+      h('span',{style:{fontWeight:700,fontSize:'.95rem'}},'📋 게시판'),
+      h('div',{style:{flex:1}}),
+      h('span',{style:{fontSize:'.76rem',color:'#9ca3af'}},'로그인 후 글쓰기 가능')
+    );
+    let content;
+    if(view&&typeof view==='object'){
+      const post=boardPosts.find(p=>p.id===view.id);
+      if(!post){renderBoardPage(null);return;}
+      content=h('div',{style:{display:'flex',flexDirection:'column',flex:1,overflow:'hidden',background:'white'}},
+        h('div',{style:{display:'flex',alignItems:'center',gap:'8px',padding:'10px 20px',borderBottom:'1px solid #e5e7eb',flexShrink:0}},
+          h('button',{style:{background:'none',border:'1px solid #e5e7eb',padding:'4px 10px',borderRadius:'6px',cursor:'pointer',fontSize:'.78rem'},onClick:()=>renderBoardPage(null)},'← 목록'),
+          post.category==='notice'?h('span',{style:{fontSize:'.68rem',background:'#6b7280',color:'white',padding:'2px 7px',borderRadius:'3px',fontWeight:700}},'공지'):null,
+          h('span',{style:{fontWeight:700,fontSize:'1rem',flex:1}},post.title)
+        ),
+        h('div',{style:{fontSize:'.74rem',color:'#9ca3af',padding:'6px 20px',borderBottom:'1px solid #f0f0f0',flexShrink:0}},`${post.author} · ${dtFull(post.createdAt)}`),
+        h('div',{style:{flex:1,overflowY:'auto',padding:'16px 20px',fontSize:'.86rem',color:'#374151',lineHeight:1.8,whiteSpace:'pre-wrap'}},post.content||'(내용 없음)')
+      );
+    } else {
+      const notices=boardPosts.filter(p=>p.category==='notice');
+      const generals=boardPosts.filter(p=>p.category!=='notice');
+      content=h('div',{style:{flex:1,overflowY:'auto',display:'flex',flexDirection:'column'}},
+        // 공지 영역
+        h('div',{style:{background:'#f0f0f0',borderBottom:'2px solid #e5e7eb',padding:'12px 20px'}},
+          h('div',{style:{fontSize:'.72rem',fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'.6px',marginBottom:'8px'}},'📢 공지사항'),
+          notices.length===0
+            ?h('div',{style:{fontSize:'.78rem',color:'#9ca3af',textAlign:'center',padding:'10px 0'}},'등록된 공지가 없습니다')
+            :h('div',{style:{display:'flex',flexDirection:'column',gap:'5px'}},...notices.map(p=>{
+                const item=h('div',{style:{background:'#e8e8e8',borderRadius:'6px',padding:'8px 12px',cursor:'pointer',display:'flex',alignItems:'center',gap:'8px'}},
+                  h('span',{style:{fontSize:'.66rem',fontWeight:700,color:'white',background:'#6b7280',padding:'1px 6px',borderRadius:'3px',flexShrink:0}},'공지'),
+                  h('span',{style:{fontSize:'.84rem',fontWeight:600,color:'#374151',flex:1,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}},p.title),
+                  h('span',{style:{fontSize:'.68rem',color:'#9ca3af',flexShrink:0}},`${p.author} · ${dtFmt(p.createdAt)}`)
+                );
+                item.addEventListener('click',()=>renderBoardPage({id:p.id}));
+                return item;
+              }))
+        ),
+        // 일반 게시글
+        h('div',{style:{flex:1,padding:'12px 20px',display:'flex',flexDirection:'column',gap:'6px'}},
+          generals.length===0
+            ?h('div',{style:{textAlign:'center',padding:'24px 0',color:'#9ca3af',fontSize:'.82rem'}},'등록된 게시글이 없습니다')
+            :generals.map(p=>{
+              const item=h('div',{style:{background:'white',border:'1px solid #e5e7eb',borderRadius:'8px',padding:'10px 16px',cursor:'pointer',display:'flex',alignItems:'center',gap:'10px'}},
+                h('div',{style:{flex:1,minWidth:0}},
+                  h('div',{style:{fontWeight:600,fontSize:'.86rem',color:'#1f2937',marginBottom:'2px',overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}},p.title),
+                  h('div',{style:{fontSize:'.71rem',color:'#9ca3af'}},`${p.author} · ${dtFmt(p.createdAt)}`)
+                )
+              );
+              item.addEventListener('click',()=>renderBoardPage({id:p.id}));
+              return item;
+            })
+        )
+      );
+    }
+    root.appendChild(h('div',{style:{display:'flex',flexDirection:'column',height:'100vh',background:'#f3f4f6'}},topbar,content));
+  }
+  renderBoardPage(null);
+}
+
 function showLoginScreen(){
   const root=document.getElementById('app');
   root.innerHTML='';
@@ -414,6 +502,10 @@ function showLoginScreen(){
   pwEl.addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin();});
   unEl.addEventListener('keydown',e=>{if(e.key==='Enter')pwEl.focus();});
   const btn=h('button',{class:'login-btn',onClick:tryLogin},h('span',{},'🔑'),'로그인');
+  const boardBtn=h('button',{
+    style:{marginTop:'12px',width:'100%',padding:'8px',border:'1px solid #e5e7eb',borderRadius:'8px',background:'#f9fafb',color:'#4f46e5',fontSize:'.82rem',fontWeight:600,cursor:'pointer'},
+    onClick:()=>showLoginBoard()
+  },'📋 게시판 보기');
   const card=h('div',{class:'login-card'},
     h('div',{class:'login-icon'},'📅'),
     h('div',{class:'login-title'},"KONG'S 일정 관리"),
@@ -421,7 +513,8 @@ function showLoginScreen(){
     errEl,
     h('div',{class:'login-field'},h('label',{class:'login-label'},'사용자명'),unEl),
     h('div',{class:'login-field'},h('label',{class:'login-label'},'비밀번호'),pwEl),
-    btn
+    btn,
+    boardBtn
   );
   root.appendChild(h('div',{class:'login-wrap'},card));
   setTimeout(()=>{if(lastUser)pwEl.focus();else unEl.focus();},100);
@@ -860,64 +953,106 @@ function saveBoard(){
   if(fDb)fDb.ref('kong_app/board').set(boardPosts).catch(()=>{});
 }
 function renderBoard(){
+  const isAdmin=authUser&&authUser.role==='admin';
+  const dtFmt=iso=>{const dt=new Date(iso);return`${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()}`;};
+  const dtFull=iso=>{const dt=new Date(iso);return`${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;};
+
+  // ── 글쓰기 ──
   if(boardView==='write'){
-    return h('div',{class:'board-wrap'},
-      h('div',{class:'board-toolbar'},
+    if(!boardForm.category)boardForm.category='general';
+    return h('div',{class:'board-write-wrap'},
+      h('div',{class:'board-write-hd'},
         h('button',{class:'btn bs',style:{fontSize:'.78rem'},onClick:()=>{boardView=null;render();}},'← 목록'),
-        h('span',{class:'board-title-bar'},'새 글 작성')
+        h('span',{style:{fontWeight:700,fontSize:'.92rem'}},'새 글 작성')
       ),
-      h('div',{style:{padding:'14px 16px',display:'flex',flexDirection:'column',gap:'10px',flex:1,overflowY:'auto'}},
+      h('div',{class:'board-write-body'},
+        isAdmin?h('div',{class:'fg'},
+          h('label',{class:'fl'},'게시 영역'),
+          h('div',{class:'board-cat-sel'},
+            h('button',{class:'board-cat-btn'+(boardForm.category==='general'?' active':''),onClick:()=>{boardForm.category='general';render();}},'일반'),
+            h('button',{class:'board-cat-btn'+(boardForm.category==='notice'?' active':''),onClick:()=>{boardForm.category='notice';render();}},'공지 (회색 영역)')
+          )
+        ):null,
         h('div',{class:'fg'},
           h('label',{class:'fl'},'제목'),
           (()=>{const i=h('input',{class:'fi',placeholder:'제목을 입력하세요',value:boardForm.title});i.addEventListener('input',e=>{boardForm.title=e.target.value;});return i;})()
         ),
         h('div',{class:'fg'},
           h('label',{class:'fl'},'내용'),
-          (()=>{const ta=document.createElement('textarea');ta.className='board-post-input';ta.rows=10;ta.placeholder='내용을 입력하세요';ta.value=boardForm.content;ta.addEventListener('input',e=>{boardForm.content=e.target.value;});return ta;})()
-        ),
-        h('div',{style:{display:'flex',justifyContent:'flex-end',gap:'8px'}},
-          h('button',{class:'btn bs',onClick:()=>{boardView=null;boardForm={title:'',content:''};render();}},'취소'),
-          h('button',{class:'btn bd',onClick:()=>{
-            if(!boardForm.title.trim()){toast('제목을 입력하세요');return;}
-            boardPosts.unshift({id:uid(),title:boardForm.title.trim(),content:boardForm.content.trim(),author:authUser.username,createdAt:new Date().toISOString()});
-            saveBoard();boardView=null;boardForm={title:'',content:''};render();toast('게시글이 등록되었습니다 ✅');
-          }},'등록')
+          (()=>{const ta=document.createElement('textarea');ta.className='board-post-input';ta.rows=12;ta.placeholder='내용을 입력하세요';ta.value=boardForm.content;ta.addEventListener('input',e=>{boardForm.content=e.target.value;});return ta;})()
         )
+      ),
+      h('div',{class:'board-write-ft'},
+        h('button',{class:'btn bs',onClick:()=>{boardView=null;boardForm={title:'',content:'',category:'general'};render();}},'취소'),
+        h('button',{class:'btn bd',onClick:()=>{
+          if(!boardForm.title.trim()){toast('제목을 입력하세요');return;}
+          boardPosts.unshift({id:uid(),title:boardForm.title.trim(),content:boardForm.content.trim(),author:authUser.username,category:boardForm.category||'general',createdAt:new Date().toISOString()});
+          saveBoard();boardView=null;boardForm={title:'',content:'',category:'general'};render();toast('게시글이 등록되었습니다 ✅');
+        }},'등록')
       )
     );
   }
+
+  // ── 상세보기 ──
   if(boardView&&typeof boardView==='object'){
     const post=boardPosts.find(p=>p.id===boardView.id);
-    if(!post)return h('div',{class:'board-wrap'},h('div',{class:'board-toolbar'},h('button',{class:'btn bs',onClick:()=>{boardView=null;render();}},'← 목록')));
-    const dt=new Date(post.createdAt);
-    const dtStr=`${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
-    return h('div',{class:'board-wrap'},
-      h('div',{class:'board-toolbar'},
-        h('button',{class:'btn bs',style:{fontSize:'.78rem'},onClick:()=>{boardView=null;render();}},'← 목록'),
-        authUser&&(authUser.role==='admin'||authUser.username===post.author)?
-          h('button',{class:'btn',style:{fontSize:'.74rem',padding:'4px 10px',border:'1px solid #fca5a5',color:'#ef4444',borderRadius:'6px',cursor:'pointer'},onClick:()=>{if(confirm('삭제하시겠습니까?')){boardPosts=boardPosts.filter(p=>p.id!==post.id);saveBoard();boardView=null;render();toast('삭제되었습니다');}}},  '삭제'):null
-      ),
-      h('div',{class:'board-detail-title',style:{padding:'10px 16px 4px',fontSize:'1rem',fontWeight:700}},post.title),
-      h('div',{class:'board-detail-meta'},`${post.author} · ${dtStr}`),
-      h('div',{class:'board-detail-body'},post.content||'(내용 없음)')
-    );
+    if(!post){boardView=null;}
+    else{
+      const canDel=authUser&&(authUser.role==='admin'||authUser.username===post.author);
+      return h('div',{class:'board-detail-wrap'},
+        h('div',{class:'board-detail-hd'},
+          h('button',{class:'btn bs',style:{fontSize:'.78rem'},onClick:()=>{boardView=null;render();}},'← 목록'),
+          post.category==='notice'?h('span',{style:{fontSize:'.68rem',background:'#6b7280',color:'white',padding:'2px 7px',borderRadius:'3px',fontWeight:700}},'공지'):null,
+          h('span',{class:'board-detail-title'},post.title),
+          canDel?h('button',{style:{fontSize:'.74rem',padding:'4px 10px',border:'1px solid #fca5a5',color:'#ef4444',borderRadius:'6px',cursor:'pointer',background:'none',flexShrink:0},onClick:()=>{if(confirm('삭제하시겠습니까?')){boardPosts=boardPosts.filter(p=>p.id!==post.id);saveBoard();boardView=null;render();toast('삭제되었습니다');}}},'삭제'):null
+        ),
+        h('div',{class:'board-detail-meta'},`${post.author} · ${dtFull(post.createdAt)}`),
+        h('div',{class:'board-detail-body'},post.content||'(내용 없음)')
+      );
+    }
   }
-  // 목록
+
+  // ── 목록 ──
+  const notices=boardPosts.filter(p=>p.category==='notice');
+  const generals=boardPosts.filter(p=>p.category!=='notice');
   return h('div',{class:'board-wrap'},
     h('div',{class:'board-toolbar'},
       h('span',{class:'board-title-bar'},'📋 게시판'),
-      h('button',{class:'btn-add-ev',style:{fontSize:'.78rem',padding:'5px 12px'},onClick:()=>{boardView='write';boardForm={title:'',content:''};render();}},'+ 글쓰기')
+      authUser?h('button',{class:'btn-add-ev',style:{fontSize:'.78rem',padding:'5px 14px'},onClick:()=>{boardView='write';boardForm={title:'',content:'',category:'general'};render();}},'+ 글쓰기'):null
     ),
-    boardPosts.length===0
-      ?h('div',{class:'board-empty'},'등록된 게시글이 없습니다')
-      :h('div',{class:'board-list'},...boardPosts.map(p=>{
-        const dt=new Date(p.createdAt);
-        const dtStr=`${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()}`;
-        return h('div',{class:'board-item',onClick:()=>{boardView={id:p.id};render();}},
-          h('div',{class:'board-item-title'},p.title),
-          h('div',{class:'board-item-meta'},`${p.author} · ${dtStr}`)
-        );
-      }))
+    h('div',{class:'board-body'},
+      // 공지 영역 (회색)
+      h('div',{class:'board-notice-zone'},
+        h('div',{class:'board-notice-hd'},
+          h('span',{class:'board-notice-label'},'📢 공지사항'),
+          isAdmin?h('button',{style:{fontSize:'.72rem',padding:'3px 10px',border:'1px solid #9ca3af',borderRadius:'5px',cursor:'pointer',background:'white',color:'#374151'},onClick:()=>{boardView='write';boardForm={title:'',content:'',category:'notice'};render();}},'+ 공지 등록'):null
+        ),
+        notices.length===0
+          ?h('div',{class:'board-notice-empty'},'등록된 공지가 없습니다')
+          :h('div',{class:'board-notice-list'},...notices.map(p=>
+            h('div',{class:'board-notice-item',onClick:()=>{boardView={id:p.id};render();}},
+              h('span',{class:'board-notice-badge'},'공지'),
+              h('span',{class:'board-notice-title'},p.title),
+              h('span',{class:'board-notice-meta'},`${p.author} · ${dtFmt(p.createdAt)}`)
+            )
+          ))
+      ),
+      // 일반 게시글 영역
+      h('div',{class:'board-general-zone'},
+        generals.length===0
+          ?h('div',{class:'board-empty'},'등록된 게시글이 없습니다')
+          :generals.map(p=>{
+            const item=h('div',{class:'board-item'},
+              h('div',{class:'board-item-body'},
+                h('div',{class:'board-item-title'},p.title),
+                h('div',{class:'board-item-meta'},`${p.author} · ${dtFmt(p.createdAt)}`)
+              )
+            );
+            item.addEventListener('click',()=>{boardView={id:p.id};render();});
+            return item;
+          })
+      )
+    )
   );
 }
 
@@ -1046,32 +1181,30 @@ function renderSidebar(){
   const mDays=calDays(miniY,miniM);
   const ebd=getEvMap('2000-01-01','2099-12-31');
   const teamObj=curTeam?teams.find(t=>t.id===curTeam):null;
-  // 다가오는 일정: 강조만, 반복 포함, 날짜순
-  const upLimit=addD(todayStr,180); // 180일 이내
+  // 다가오는 일정: 강조 + 비반복만
   const upItems=[];
-  const isLunarRecur=t=>t==='monthly_lunar'||t==='yearly_lunar';
-  events.filter(e=>e.emphasis).forEach(e=>{
-    // 단일/기간 일정
-    if(!e.recur){
-      const d=e.endDate&&e.endDate>todayStr?todayStr:e.date;
-      if(e.date>=todayStr||( e.endDate&&e.endDate>=todayStr)){
-        upItems.push({e,dispDate:e.date>=todayStr?e.date:todayStr,lunarLabel:''});
-      }
-    } else {
-      // 반복 일정: 오늘 이후 첫 번째 날짜
-      const dates=recurDates(e,todayStr,upLimit);
-      // 오늘 기준일 자체도 포함 (recurDates는 e.date 이후를 반환, 오늘이 e.date면 다음 포함)
-      const allDates=[e.date,...dates].filter(d=>d>=todayStr&&d<=upLimit);
-      if(allDates.length>0){
-        const nextDate=allDates[0];
-        const lunarType=isLunarRecur(e.recur.type);
-        const lunarLabel=lunarType?(() => {const l=solarToLunar(nextDate);return l?` (음력 ${l.mo}/${l.day})`:' (음력)'})():'';
-        upItems.push({e,dispDate:nextDate,lunarLabel});
-      }
+  events.filter(e=>e.emphasis&&!e.recur).forEach(e=>{
+    if(e.date>=todayStr||(e.endDate&&e.endDate>=todayStr)){
+      upItems.push({e,dispDate:e.date>=todayStr?e.date:todayStr});
     }
   });
   upItems.sort((a,b)=>a.dispDate.localeCompare(b.dispDate)||(a.e.startTime||'').localeCompare(b.e.startTime||''));
   const upShow=upItems.slice(0,8);
+  // 반복 일정: 강조 + 반복만, 다음 발생일 기준 정렬
+  const upLimit=addD(todayStr,365);
+  const isLunarRecur=t=>t==='monthly_lunar'||t==='yearly_lunar';
+  const recurItems=[];
+  events.filter(e=>e.emphasis&&e.recur).forEach(e=>{
+    const dates=recurDates(e,todayStr,upLimit);
+    const allDates=[e.date,...dates].filter(d=>d>=todayStr&&d<=upLimit);
+    if(allDates.length>0){
+      const nextDate=allDates[0];
+      const lunarType=isLunarRecur(e.recur.type);
+      const lunarLabel=lunarType?(()=>{const l=solarToLunar(nextDate);return l?` (음력 ${l.mo}/${l.day})`:' (음력)';})():'';
+      recurItems.push({e,dispDate:nextDate,lunarLabel});
+    }
+  });
+  recurItems.sort((a,b)=>a.dispDate.localeCompare(b.dispDate));
 
   return h('div',{class:'sidebar'},
     // mini cal
@@ -1098,14 +1231,25 @@ function renderSidebar(){
         })
       )
     ),
-    // upcoming (강조 일정만, 반복 포함, 음력 표시)
+    // 다가오는 일정 (강조 + 비반복)
     h('div',{},
       h('div',{class:'sb-label'},'다가오는 일정'),
       upShow.length===0?h('div',{class:'no-up'},'강조 일정 없음'):
-      h('div',{class:'up-list'},...upShow.map(({e,dispDate,lunarLabel})=>{
+      h('div',{class:'up-list'},...upShow.map(({e,dispDate})=>{
         return h('div',{class:'up-item',style:{borderColor:e.color||'#4f46e5'},onClick:()=>openDetail(e)},
           h('div',{class:'up-t'},e.title),
-          h('div',{class:'up-d'},fmtDisp(dispDate)+(e.startTime?' · '+e.startTime:'')+lunarLabel)
+          h('div',{class:'up-d'},fmtDisp(dispDate)+(e.startTime?' · '+e.startTime:''))
+        );
+      }))
+    ),
+    // 반복 일정 (강조 + 반복, 음력 표시)
+    h('div',{style:{marginTop:'8px'}},
+      h('div',{class:'sb-label'},'반복 일정'),
+      recurItems.length===0?h('div',{class:'no-up'},'반복 일정 없음'):
+      h('div',{class:'up-list'},...recurItems.map(({e,dispDate,lunarLabel})=>{
+        return h('div',{class:'up-item',style:{borderColor:e.color||'#10b981'},onClick:()=>openDetail(e)},
+          h('div',{class:'up-t'},'🔁 '+e.title),
+          h('div',{class:'up-d'},fmtDisp(dispDate)+lunarLabel)
         );
       }))
     ),
@@ -1219,8 +1363,7 @@ function renderDay(){
             ),
             e.photo?h('img',{class:'dv-img',src:e.photo,alt:'사진'}):null
           );
-          item.addEventListener('click',()=>openDetail(e));
-          item.addEventListener('dblclick',ev=>{ev.stopPropagation();if(!e._mb)openEdit(e);});
+          item.addEventListener('dblclick',ev=>{ev.stopPropagation();openDetail(e);});
           return item;
         }))
   );
