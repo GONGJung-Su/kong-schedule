@@ -907,7 +907,7 @@ function navTitle(){
   return fmtDisp(selDate);
 }
 function navTitleMobile(){
-  const ws=wkStart(selDate),we=addD(ws,13);
+  const ws=wkStart(tw2Base),we=addD(ws,13);
   const s=parseD(ws),e=parseD(we);
   const yy=String(s.getFullYear()).slice(2);
   return`${yy}. ${s.getMonth()+1}/${s.getDate()}~${e.getMonth()+1}/${e.getDate()}`;
@@ -952,7 +952,7 @@ function renderMobileCell({d,ds},ebd){
   return cell;
 }
 function renderMobile2Week(){
-  const ws=wkStart(selDate);
+  const ws=wkStart(tw2Base); // tw2Base 기준 (이전/다음 버튼으로만 변경)
   const allDays=Array.from({length:14},(_,i)=>{const ds=addD(ws,i);return{d:parseD(ds),ds};});
   const s=allDays[0].ds,en=allDays[13].ds;
   const ebd=getEvMap(s,en);
