@@ -25,6 +25,7 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
 .icon-btn{background:none;border:1px solid #e5e7eb;color:#6b7280;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:.78rem}
 .icon-btn:hover{background:#f9fafb;color:#374151}
+.icon-btn.active{background:#ede9fe;color:#4f46e5;border-color:#c4b5fd}
 .view-toggle{display:flex;background:#f3f4f6;border-radius:6px;padding:2px;gap:1px}
 .vt-btn{padding:5px 13px;border-radius:5px;font-size:.8rem;font-weight:600;cursor:pointer;border:none;background:none;color:#6b7280;transition:all .15s}
 .vt-btn.active{background:white;color:#4f46e5;box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -58,6 +59,27 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans
 .up-d{font-size:.66rem;color:#9ca3af;margin-top:1px}
 .no-up{font-size:.74rem;color:#9ca3af;text-align:center;padding:10px}
 .team-indicator{font-size:.7rem;padding:3px 8px;border-radius:10px;background:#ede9fe;color:#4f46e5;font-weight:600;text-align:center}
+/* BOARD */
+.board-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.board-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:white}
+.board-title-bar{font-size:.95rem;font-weight:700;color:#111827}
+.board-list{flex:1;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+.board-item{background:white;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;cursor:pointer;transition:box-shadow .1s}
+.board-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.board-item-title{font-size:.88rem;font-weight:600;color:#1f2937;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.board-item-meta{font-size:.72rem;color:#9ca3af}
+.board-empty{text-align:center;padding:40px 0;color:#9ca3af;font-size:.84rem}
+.board-detail-wrap{display:flex;flex-direction:column;height:100%}
+.board-detail-hd{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid #e5e7eb;flex-shrink:0}
+.board-detail-title{font-size:.96rem;font-weight:700;color:#111827;flex:1}
+.board-detail-meta{font-size:.74rem;color:#9ca3af;padding:8px 16px;border-bottom:1px solid #f3f4f6;flex-shrink:0}
+.board-detail-body{flex:1;overflow-y:auto;padding:14px 16px;font-size:.86rem;color:#374151;line-height:1.7;white-space:pre-wrap}
+.board-post-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:5000;display:flex;align-items:center;justify-content:center;padding:20px}
+.board-post-modal{background:white;border-radius:12px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:0;overflow:hidden}
+.board-post-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #e5e7eb}
+.board-post-body{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.board-post-ft{display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid #e5e7eb}
+.board-post-input{width:100%;border:1px solid #d1d5db;border-radius:6px;padding:8px 10px;font-size:.84rem;font-family:inherit;resize:none}
 
 /* CALENDAR */
 .cal-hdr{display:grid;grid-template-columns:repeat(7,1fr);background:white;border-bottom:1px solid #e5e7eb;flex-shrink:0}
@@ -218,7 +240,6 @@ select.fi{cursor:pointer}
 .mb-add-btn{background:#4f46e5;color:white;border:none;padding:5px 11px;border-radius:6px;cursor:pointer;font-size:.84rem;font-weight:600;white-space:nowrap;flex-shrink:0}
 .mb-icon-btn{background:none;border:1px solid #e5e7eb;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:.88rem;flex-shrink:0}
 .mb-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(7,1fr);overflow:hidden;background:#f0f0f0;gap:1px;touch-action:pan-y}
-.mb-grid-land{grid-template-columns:1fr 1fr 1fr!important;grid-template-rows:repeat(5,1fr)!important;grid-auto-flow:column}
 .mb-cell{background:white;padding:4px 5px;cursor:pointer;overflow:hidden;transition:background .1s;min-height:0;display:flex;flex-direction:row;align-items:flex-start;gap:3px}
 .mb-cell:hover{background:#f8faff!important}
 .mb-cell.mb-today{background:#f5f3ff!important}
@@ -470,8 +491,12 @@ if(!curUser.id){curUser.id=uid();ss('curUser',curUser);}
 let viewY=today.getFullYear(),viewM=today.getMonth();
 let miniY=today.getFullYear(),miniM=today.getMonth();
 let selDate=todayStr,viewMode='month';
+let tw2Base=todayStr; // 2주뷰 창 기준일 (이전/다음 버튼으로만 변경)
 let modalMode=null,editEv=null,detailEv=null,selEvId=null;
 let form=ef();
+let boardPosts=[];  // 게시판 글 목록
+let boardView=null; // null=목록, 'write'=작성, {id}=상세보기
+let boardForm={title:'',content:''};
 
 function ls(k,d){
   try{
@@ -699,28 +724,27 @@ function getEvMap(s,en){
 // ── NAVIGATION ─────────────────────────────────────────────
 const _isMobile=window.innerWidth<=700||('ontouchstart' in window&&window.screen.width<=900);
 function isMobile(){return _isMobile;}
-function isLandscape(){return window.innerWidth>window.innerHeight;}
 function navPrev(){
-  if(isMobile()||viewMode==='2week'){selDate=addD(wkStart(selDate),-14);const d=parseD(selDate);viewY=d.getFullYear();viewM=d.getMonth();}
+  if(isMobile()||viewMode==='2week'){tw2Base=selDate=addD(wkStart(tw2Base),-14);const d=parseD(selDate);viewY=d.getFullYear();viewM=d.getMonth();}
   else if(viewMode==='month'){viewM--;if(viewM<0){viewM=11;viewY--;}}
   else{selDate=addD(selDate,-1);const d=parseD(selDate);viewY=d.getFullYear();viewM=d.getMonth();}
   miniY=viewY;miniM=viewM;render();
 }
 function navNext(){
-  if(isMobile()||viewMode==='2week'){selDate=addD(wkStart(selDate),14);const d=parseD(selDate);viewY=d.getFullYear();viewM=d.getMonth();}
+  if(isMobile()||viewMode==='2week'){tw2Base=selDate=addD(wkStart(tw2Base),14);const d=parseD(selDate);viewY=d.getFullYear();viewM=d.getMonth();}
   else if(viewMode==='month'){viewM++;if(viewM>11){viewM=0;viewY++;}}
   else{selDate=addD(selDate,1);const d=parseD(selDate);viewY=d.getFullYear();viewM=d.getMonth();}
   miniY=viewY;miniM=viewM;render();
 }
 function miniNav(dir){miniM+=dir;if(miniM<0){miniM=11;miniY--;}if(miniM>11){miniM=0;miniY++;}render();}
-function goToday(){viewY=today.getFullYear();viewM=today.getMonth();miniY=viewY;miniM=viewM;selDate=todayStr;render();}
-function setView(m){viewMode=m;render();}
+function goToday(){viewY=today.getFullYear();viewM=today.getMonth();miniY=viewY;miniM=viewM;selDate=todayStr;tw2Base=todayStr;render();}
+function setView(m){viewMode=m;if(m==='2week')tw2Base=selDate;render();}
 function selMiniDay(d){selDate=fmt(d);viewY=d.getFullYear();viewM=d.getMonth();render();}
 
 function navTitle(){
   if(viewMode==='month')return`${viewY}년 ${MONTHS[viewM]}`;
   if(viewMode==='2week'){
-    const ws=wkStart(selDate),we=addD(ws,13);
+    const ws=wkStart(tw2Base),we=addD(ws,13);
     const s=parseD(ws),e=parseD(we);
     return s.getMonth()===e.getMonth()?`${s.getFullYear()}년 ${s.getMonth()+1}월 ${s.getDate()}~${e.getDate()}일`:`${s.getMonth()+1}.${s.getDate()}~${e.getMonth()+1}.${e.getDate()}`;
   }
@@ -776,11 +800,6 @@ function renderMobile2Week(){
   const allDays=Array.from({length:14},(_,i)=>{const ds=addD(ws,i);return{d:parseD(ds),ds};});
   const s=allDays[0].ds,en=allDays[13].ds;
   const ebd=getEvMap(s,en);
-  if(isLandscape()){
-    // 가로: 3열×5행, 컬럼 우선 배치 (14일 순서대로)
-    const cells=allDays.map(day=>renderMobileCell(day,ebd));
-    return h('div',{class:'mb-grid mb-grid-land'},...cells);
-  }
   // 세로: 2열×7행 (1주차 | 2주차)
   const cells=[];
   for(let i=0;i<7;i++){
@@ -829,6 +848,77 @@ function showMobileDaySheet(ds,dayEvs){
   sheet.appendChild(body);
   overlay.appendChild(sheet);
   document.body.appendChild(overlay);
+}
+
+// ── 게시판 ─────────────────────────────────────────────────
+function loadBoard(){
+  try{boardPosts=JSON.parse(localStorage.getItem('ks_board')||'[]');}catch{boardPosts=[];}
+  if(fDb){fDb.ref('kong_app/board').get().then(s=>{if(s.exists()&&Array.isArray(s.val())){boardPosts=s.val();localStorage.setItem('ks_board',JSON.stringify(boardPosts));}}).catch(()=>{});}
+}
+function saveBoard(){
+  localStorage.setItem('ks_board',JSON.stringify(boardPosts));
+  if(fDb)fDb.ref('kong_app/board').set(boardPosts).catch(()=>{});
+}
+function renderBoard(){
+  if(boardView==='write'){
+    return h('div',{class:'board-wrap'},
+      h('div',{class:'board-toolbar'},
+        h('button',{class:'btn bs',style:{fontSize:'.78rem'},onClick:()=>{boardView=null;render();}},'← 목록'),
+        h('span',{class:'board-title-bar'},'새 글 작성')
+      ),
+      h('div',{style:{padding:'14px 16px',display:'flex',flexDirection:'column',gap:'10px',flex:1,overflowY:'auto'}},
+        h('div',{class:'fg'},
+          h('label',{class:'fl'},'제목'),
+          (()=>{const i=h('input',{class:'fi',placeholder:'제목을 입력하세요',value:boardForm.title});i.addEventListener('input',e=>{boardForm.title=e.target.value;});return i;})()
+        ),
+        h('div',{class:'fg'},
+          h('label',{class:'fl'},'내용'),
+          (()=>{const ta=document.createElement('textarea');ta.className='board-post-input';ta.rows=10;ta.placeholder='내용을 입력하세요';ta.value=boardForm.content;ta.addEventListener('input',e=>{boardForm.content=e.target.value;});return ta;})()
+        ),
+        h('div',{style:{display:'flex',justifyContent:'flex-end',gap:'8px'}},
+          h('button',{class:'btn bs',onClick:()=>{boardView=null;boardForm={title:'',content:''};render();}},'취소'),
+          h('button',{class:'btn bd',onClick:()=>{
+            if(!boardForm.title.trim()){toast('제목을 입력하세요');return;}
+            boardPosts.unshift({id:uid(),title:boardForm.title.trim(),content:boardForm.content.trim(),author:authUser.username,createdAt:new Date().toISOString()});
+            saveBoard();boardView=null;boardForm={title:'',content:''};render();toast('게시글이 등록되었습니다 ✅');
+          }},'등록')
+        )
+      )
+    );
+  }
+  if(boardView&&typeof boardView==='object'){
+    const post=boardPosts.find(p=>p.id===boardView.id);
+    if(!post)return h('div',{class:'board-wrap'},h('div',{class:'board-toolbar'},h('button',{class:'btn bs',onClick:()=>{boardView=null;render();}},'← 목록')));
+    const dt=new Date(post.createdAt);
+    const dtStr=`${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    return h('div',{class:'board-wrap'},
+      h('div',{class:'board-toolbar'},
+        h('button',{class:'btn bs',style:{fontSize:'.78rem'},onClick:()=>{boardView=null;render();}},'← 목록'),
+        authUser&&(authUser.role==='admin'||authUser.username===post.author)?
+          h('button',{class:'btn',style:{fontSize:'.74rem',padding:'4px 10px',border:'1px solid #fca5a5',color:'#ef4444',borderRadius:'6px',cursor:'pointer'},onClick:()=>{if(confirm('삭제하시겠습니까?')){boardPosts=boardPosts.filter(p=>p.id!==post.id);saveBoard();boardView=null;render();toast('삭제되었습니다');}}},  '삭제'):null
+      ),
+      h('div',{class:'board-detail-title',style:{padding:'10px 16px 4px',fontSize:'1rem',fontWeight:700}},post.title),
+      h('div',{class:'board-detail-meta'},`${post.author} · ${dtStr}`),
+      h('div',{class:'board-detail-body'},post.content||'(내용 없음)')
+    );
+  }
+  // 목록
+  return h('div',{class:'board-wrap'},
+    h('div',{class:'board-toolbar'},
+      h('span',{class:'board-title-bar'},'📋 게시판'),
+      h('button',{class:'btn-add-ev',style:{fontSize:'.78rem',padding:'5px 12px'},onClick:()=>{boardView='write';boardForm={title:'',content:''};render();}},'+ 글쓰기')
+    ),
+    boardPosts.length===0
+      ?h('div',{class:'board-empty'},'등록된 게시글이 없습니다')
+      :h('div',{class:'board-list'},...boardPosts.map(p=>{
+        const dt=new Date(p.createdAt);
+        const dtStr=`${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()}`;
+        return h('div',{class:'board-item',onClick:()=>{boardView={id:p.id};render();}},
+          h('div',{class:'board-item-title'},p.title),
+          h('div',{class:'board-item-meta'},`${p.author} · ${dtStr}`)
+        );
+      }))
+  );
 }
 
 // ── CRUD ───────────────────────────────────────────────────
@@ -923,21 +1013,22 @@ function renderTopbar(){
       h('div',{class:'logo-icon'},'📅'),
       h('span',{class:'logo-text'},"KONG'S 일정 관리")
     ),
-    h('div',{class:'topbar-nav'},
+    viewMode!=='board'?h('div',{class:'topbar-nav'},
       h('button',{class:'nav-btn',onClick:navPrev},'‹ 이전'),
       h('span',{class:'cal-title'},navTitle()),
       h('button',{class:'nav-btn',onClick:navNext},'다음 ›')
-    ),
-    h('div',{class:'topbar-actions'},
+    ):null,
+    viewMode!=='board'?h('div',{class:'topbar-actions'},
       h('button',{class:'btn-today',onClick:goToday},'오늘'),
       h('button',{class:'btn-add-ev',onClick:()=>openAdd(selDate)},'+ 일정 추가')
-    ),
+    ):null,
     h('div',{class:'topbar-right'},
       teamName?h('span',{style:{fontSize:'.72rem',background:'#ede9fe',color:'#4f46e5',padding:'3px 8px',borderRadius:'10px',fontWeight:600}},`팀: ${teamName}`):null,
       authUser?h('div',{class:'user-badge'},
         '👤 '+authUser.username,
         authUser.role==='admin'?h('span',{class:'admin-badge'},'관리자'):null
       ):null,
+      h('button',{class:'icon-btn'+(viewMode==='board'?' active':''),onClick:()=>{viewMode='board';boardView=null;loadBoard();render();}},'📋 ',h('span',{class:'btn-lbl'},'게시판')),
       h('button',{class:'icon-btn',onClick:()=>{modalMode='settings';render();}},'⚙️ ',h('span',{class:'btn-lbl'},'설정')),
       h('button',{class:'icon-btn',style:{opacity:'0.4',cursor:'not-allowed',pointerEvents:'none'},title:'팀 기능 준비 중'},'👥 ',h('span',{class:'btn-lbl'},'팀')),
       h('button',{class:'icon-btn',style:{color:'#ef4444'},onClick:doLogout,title:'로그아웃'},'↩',h('span',{class:'btn-lbl'},' 로그아웃')),
@@ -954,8 +1045,33 @@ function renderTopbar(){
 function renderSidebar(){
   const mDays=calDays(miniY,miniM);
   const ebd=getEvMap('2000-01-01','2099-12-31');
-  const up=events.filter(e=>e.date>=todayStr).sort((a,b)=>a.date.localeCompare(b.date)||(a.startTime||'').localeCompare(b.startTime||'')).slice(0,5);
   const teamObj=curTeam?teams.find(t=>t.id===curTeam):null;
+  // 다가오는 일정: 강조만, 반복 포함, 날짜순
+  const upLimit=addD(todayStr,180); // 180일 이내
+  const upItems=[];
+  const isLunarRecur=t=>t==='monthly_lunar'||t==='yearly_lunar';
+  events.filter(e=>e.emphasis).forEach(e=>{
+    // 단일/기간 일정
+    if(!e.recur){
+      const d=e.endDate&&e.endDate>todayStr?todayStr:e.date;
+      if(e.date>=todayStr||( e.endDate&&e.endDate>=todayStr)){
+        upItems.push({e,dispDate:e.date>=todayStr?e.date:todayStr,lunarLabel:''});
+      }
+    } else {
+      // 반복 일정: 오늘 이후 첫 번째 날짜
+      const dates=recurDates(e,todayStr,upLimit);
+      // 오늘 기준일 자체도 포함 (recurDates는 e.date 이후를 반환, 오늘이 e.date면 다음 포함)
+      const allDates=[e.date,...dates].filter(d=>d>=todayStr&&d<=upLimit);
+      if(allDates.length>0){
+        const nextDate=allDates[0];
+        const lunarType=isLunarRecur(e.recur.type);
+        const lunarLabel=lunarType?(() => {const l=solarToLunar(nextDate);return l?` (음력 ${l.mo}/${l.day})`:' (음력)'})():'';
+        upItems.push({e,dispDate:nextDate,lunarLabel});
+      }
+    }
+  });
+  upItems.sort((a,b)=>a.dispDate.localeCompare(b.dispDate)||(a.e.startTime||'').localeCompare(b.e.startTime||''));
+  const upShow=upItems.slice(0,8);
 
   return h('div',{class:'sidebar'},
     // mini cal
@@ -982,14 +1098,14 @@ function renderSidebar(){
         })
       )
     ),
-    // upcoming
+    // upcoming (강조 일정만, 반복 포함, 음력 표시)
     h('div',{},
       h('div',{class:'sb-label'},'다가오는 일정'),
-      up.length===0?h('div',{class:'no-up'},'예정된 일정 없음'):
-      h('div',{class:'up-list'},...up.map(e=>{
-        return h('div',{class:'up-item',style:{borderColor:e.emphasis?(e.color||'#4f46e5'):'#e5e7eb'},onClick:()=>openDetail(e)},
+      upShow.length===0?h('div',{class:'no-up'},'강조 일정 없음'):
+      h('div',{class:'up-list'},...upShow.map(({e,dispDate,lunarLabel})=>{
+        return h('div',{class:'up-item',style:{borderColor:e.color||'#4f46e5'},onClick:()=>openDetail(e)},
           h('div',{class:'up-t'},e.title),
-          h('div',{class:'up-d'},fmtDisp(e.date)+(e.startTime?' · '+e.startTime:''))
+          h('div',{class:'up-d'},fmtDisp(dispDate)+(e.startTime?' · '+e.startTime:'')+lunarLabel)
         );
       }))
     ),
@@ -1039,7 +1155,7 @@ function renderMonth(){
 
 // ── 2-WEEK VIEW ────────────────────────────────────────────
 function render2Week(){
-  const ws=wkStart(selDate);
+  const ws=wkStart(tw2Base); // tw2Base 기준 (이전/다음 버튼으로만 변경)
   const allDays=Array.from({length:14},(_,i)=>{const ds=addD(ws,i);return{d:parseD(ds),ds};});
   const s=allDays[0].ds,en=allDays[13].ds;
   const ebd=getEvMap(s,en);
@@ -1053,6 +1169,7 @@ function render2Week(){
           h('div',{class:'tw-dow',style:{color:isRed?'#ef4444':dow===6?'#3b82f6':'#6b7280'}},DOWS[dow]),
           h('div',{class:dc,style:{color:isT?undefined:isRed?'#ef4444':dow===6?'#3b82f6':'#374151'}},String(d.getDate()))
         );
+        // 날짜 클릭: selDate만 변경 (창 이동 없음)
         el.querySelector('.tw-date').addEventListener('click',()=>{selDate=ds;render();});
         return el;
       })),
@@ -1060,6 +1177,7 @@ function render2Week(){
         const isT=ds===todayStr,isSel=ds===selDate&&!isT;
         let cc='tw-cell';if(isT)cc+=' tw-today-c';else if(isSel)cc+=' tw-sel-c';
         const dayEvs=ebd[ds]||[];
+        // 셀 클릭: selDate만 변경, 창 이동 없음
         const cell=h('div',{class:cc,onClick:()=>{selDate=ds;render();}},...dayEvs.map(e=>makePill(e)));
         cell.addEventListener('dblclick',ev=>{ev.stopPropagation();openAdd(ds);});
         return cell;
@@ -1102,6 +1220,7 @@ function renderDay(){
             e.photo?h('img',{class:'dv-img',src:e.photo,alt:'사진'}):null
           );
           item.addEventListener('click',()=>openDetail(e));
+          item.addEventListener('dblclick',ev=>{ev.stopPropagation();if(!e._mb)openEdit(e);});
           return item;
         }))
   );
@@ -1446,7 +1565,7 @@ function render(){
     const viewEl=renderMobile2Week();
     root.appendChild(h('div',{class:'app'},renderMobileTopbar(),viewEl));
   }else{
-    const viewEl=viewMode==='month'?renderMonth():viewMode==='2week'?render2Week():renderDay();
+    const viewEl=viewMode==='board'?renderBoard():viewMode==='month'?renderMonth():viewMode==='2week'?render2Week():renderDay();
     root.appendChild(h('div',{class:'app'},
       renderTopbar(),
       h('div',{class:'body'},renderSidebar(),h('div',{class:'main'},viewEl))
@@ -1457,49 +1576,23 @@ function render(){
 }
 
 // 창 크기 변경 시 overflow 재계산
-let _resizeTimer=null,_wasLandscape=isLandscape();
+let _resizeTimer=null;
 window.addEventListener('resize',()=>{
   clearTimeout(_resizeTimer);
   _resizeTimer=setTimeout(()=>{
     if(modalMode)return;
-    if(isMobile()){
-      const land=isLandscape();
-      if(land!==_wasLandscape){_wasLandscape=land;if(authUser)render();}
-    }else if(viewMode==='month'){adjustMonthOverflow();}
+    if(!isMobile()&&viewMode==='month'){adjustMonthOverflow();}
   },300);
 });
 
 // ── 종료 확인 ────────────────────────────────
-function showExitConfirm(){
-  const ov=h('div',{class:'overlay',style:{zIndex:9999}},
-    h('div',{class:'modal',style:{maxWidth:'260px'},onClick:e=>e.stopPropagation()},
-      h('div',{class:'modal-body',style:{textAlign:'center',padding:'28px 20px 16px'}},
-        h('div',{style:{fontSize:'1.6rem',marginBottom:'10px'}},'👋'),
-        h('div',{style:{fontSize:'1rem',fontWeight:700,color:'#111827',marginBottom:'6px'}},'정말 종료할까요?')
-      ),
-      h('div',{class:'modal-ft',style:{justifyContent:'center',gap:'8px'}},
-        h('button',{class:'btn bs',onClick:()=>ov.remove()},'아니오'),
-        h('button',{class:'btn bd',onClick:()=>{ov.remove();window.history.back();setTimeout(()=>window.history.back(),100);}},'종료')
-      )
-    )
-  );
-  document.body.appendChild(ov);
-}
-// 뒤로가기 가로채기 (Android 대응)
-function _pushFakeState(){window.history.pushState({app:true},'',location.href);}
-_pushFakeState();
+// 뒤로가기: 모달/시트만 닫기 (종료 확인 없음)
 window.addEventListener('popstate',()=>{
-  _pushFakeState(); // 항상 스택 유지
-  // 1) 모달 열려있으면 → 모달 닫기
   if(modalMode){closeModal();return;}
-  // 2) 바텀시트 열려있으면 → 시트 닫기
   const sheet=document.querySelector('.mb-sheet-overlay');
   if(sheet){sheet.remove();return;}
-  // 3) 오버레이/팝업 닫기
   const pop=document.querySelector('.more-pop-float');
   if(pop){pop.remove();return;}
-  // 4) 아무것도 없으면 → 종료 확인
-  showExitConfirm();
 });
 
 // ── 앱 시작 ─────────────────────────────────
