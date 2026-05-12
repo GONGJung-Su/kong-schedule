@@ -283,12 +283,12 @@ select.fi{cursor:pointer}
   .modal-body{padding:12px 14px}
 }
 /* 모바일 가로 회전 방지 - 항상 세로 레이아웃 유지 */
-@media screen and (orientation:landscape) and (max-height:600px){
+@media screen and (orientation:landscape) and (max-width:1024px) and (pointer:coarse){
   html{
     transform:rotate(-90deg);
     transform-origin:left top;
-    width:100svh;
-    height:100svw;
+    width:100vh;
+    height:100vw;
     overflow:hidden;
     position:fixed;
     top:100%;
