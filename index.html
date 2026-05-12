@@ -776,6 +776,23 @@ function recurDates(e,s,en){
   if(!e.recur)return[];
   const r=e.recur,dates=[];let cur=e.date,cnt=0;
   const origLunar=(r.type==='monthly_lunar'||r.type==='yearly_lunar')?solarToLunar(e.date):null;
+  // 시작일이 s보다 훨씬 과거면 빠르게 건너뜀 (cnt 한계 방지)
+  if(cur<s){
+    if(r.type==='daily'){
+      const skip=Math.max(0,Math.floor((parseD(s)-parseD(cur))/86400000)-1);
+      cur=addD(cur,skip);
+    }else if(r.type==='weekly'){
+      const skip=Math.max(0,Math.floor((parseD(s)-parseD(cur))/(7*86400000))-1);
+      cur=addD(cur,skip*7);
+    }else if(r.type==='monthly'){
+      const cd=parseD(cur),sd=parseD(s);
+      const skip=Math.max(0,(sd.getFullYear()-cd.getFullYear())*12+(sd.getMonth()-cd.getMonth())-1);
+      const nd=new Date(cd);nd.setMonth(nd.getMonth()+skip);cur=fmt(nd);
+    }else if(r.type==='yearly'){
+      const skip=Math.max(0,parseD(s).getFullYear()-parseD(cur).getFullYear()-1);
+      const nd=parseD(cur);nd.setFullYear(nd.getFullYear()+skip);cur=fmt(nd);
+    }
+  }
   while(cur<=en&&cnt<400){
     cnt++;
     if(cur>=s&&cur>=e.date&&cur!==e.date)dates.push(cur);
