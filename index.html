@@ -1031,11 +1031,17 @@ function showMobileDaySheet(ds,dayEvs){
     const timeStr=e.startTime?(e.endTime?`${e.startTime} ~ ${e.endTime}`:e.startTime):'';
     const item=document.createElement('div');
     item.className='mb-sheet-item';
-    item.innerHTML=`<div class="mb-sheet-dot" style="background:${color}"></div>`
-      +`<div class="mb-sheet-info">`
-      +`<div class="mb-sheet-ev-title">${e.title}</div>`
-      +(timeStr?`<div class="mb-sheet-ev-time">${timeStr}</div>`:'')
-      +`</div>`;
+    const dot=document.createElement('div');
+    dot.className='mb-sheet-dot';
+    dot.style.background=color;
+    const info=document.createElement('div');
+    info.className='mb-sheet-info';
+    const evTitle=document.createElement('div');
+    evTitle.className='mb-sheet-ev-title';
+    evTitle.textContent=e.title;
+    info.appendChild(evTitle);
+    if(timeStr){const evTime=document.createElement('div');evTime.className='mb-sheet-ev-time';evTime.textContent=timeStr;info.appendChild(evTime);}
+    item.appendChild(dot);item.appendChild(info);
     item.addEventListener('click',()=>{close();openDetail(e);});
     return item;
   });
@@ -1043,7 +1049,10 @@ function showMobileDaySheet(ds,dayEvs){
   sheet.className='mb-sheet';
   const hd=document.createElement('div');
   hd.className='mb-sheet-hd';
-  hd.innerHTML=`<span class="mb-sheet-title">${title} · ${dayEvs.length}개</span>`;
+  const hdSpan=document.createElement('span');
+  hdSpan.className='mb-sheet-title';
+  hdSpan.textContent=`${title} · ${dayEvs.length}개`;
+  hd.appendChild(hdSpan);
   const closeBtn=document.createElement('button');
   closeBtn.className='mb-sheet-close';
   closeBtn.textContent='✕';
@@ -1548,9 +1557,15 @@ function renderAddEdit(){
             const drop=document.createElement('div');drop.className='ac-drop';
             matches.slice(0,8).forEach((t,i)=>{
               const item=document.createElement('div');item.className='ac-item';
-              // 매칭 부분 강조
+              // 매칭 부분 강조 - textContent로 XSS 방지
               const idx=t.toLowerCase().indexOf(q.toLowerCase());
-              item.innerHTML=t.slice(0,idx)+'<strong>'+t.slice(idx,idx+q.length)+'</strong>'+t.slice(idx+q.length);
+              if(idx>=0){
+                if(idx>0){item.appendChild(document.createTextNode(t.slice(0,idx)));}
+                const bold=document.createElement('strong');
+                bold.textContent=t.slice(idx,idx+q.length);
+                item.appendChild(bold);
+                if(idx+q.length<t.length){item.appendChild(document.createTextNode(t.slice(idx+q.length)));}
+              }else{item.textContent=t;}
               item.addEventListener('mousedown',e=>{e.preventDefault();inp.value=t;form.title=t;closeDrop();inp.focus();});
               drop.appendChild(item);
             });
