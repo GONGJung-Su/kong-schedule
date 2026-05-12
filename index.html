@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>KONG'S 일정 관리</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -282,6 +282,19 @@ select.fi{cursor:pointer}
   .form-row{grid-template-columns:1fr}
   .modal-body{padding:12px 14px}
 }
+/* 모바일 가로 회전 방지 - 항상 세로 레이아웃 유지 */
+@media screen and (orientation:landscape) and (max-height:600px){
+  html{
+    transform:rotate(-90deg);
+    transform-origin:left top;
+    width:100svh;
+    height:100svw;
+    overflow:hidden;
+    position:fixed;
+    top:100%;
+    left:0;
+  }
+}
 /* 모바일 하루 일정 바텀시트 */
 .mb-sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:8000;display:flex;align-items:flex-end}
 .mb-sheet{background:white;border-radius:16px 16px 0 0;width:100%;max-height:70vh;display:flex;flex-direction:column;animation:slideUp .22s ease}
@@ -384,18 +397,17 @@ function doLogin(username,password){
   const s={username:u.username,role:u.role};
   setSession(s);authUser=s;return s;
 }
-function doLogout(){clearSession();stopFbListener();authUser=null;events=[];teams=[];curTeam=null;showLoginScreen();}
+function doLogout(){clearSession();stopFbListener();stopBoardListener();authUser=null;events=[];teams=[];curTeam=null;showLoginScreen();}
 function isAdmin(){return authUser&&authUser.role==='admin';}
 function showLoginBoard(){
-  loadBoard();
   const root=document.getElementById('app');
   root.innerHTML='';
   const dtFmt=iso=>{const dt=new Date(iso);return`${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()}`;};
   const dtFull=iso=>{const dt=new Date(iso);return`${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;};
-  function renderBoardPage(view){
-    root.innerHTML='';
+  let _lbView=null;
+  function renderBoardPage(view){_lbView=view;root.innerHTML='';
     const topbar=h('div',{style:{background:'white',borderBottom:'1px solid #e5e7eb',display:'flex',alignItems:'center',height:'50px',padding:'0 20px',gap:'10px',boxShadow:'0 1px 3px rgba(0,0,0,.06)',flexShrink:0}},
-      h('button',{style:{background:'none',border:'1px solid #e5e7eb',padding:'5px 11px',borderRadius:'6px',cursor:'pointer',fontSize:'.82rem',color:'#374151'},onClick:()=>showLoginScreen()},'← 로그인'),
+      h('button',{style:{background:'none',border:'1px solid #e5e7eb',padding:'5px 11px',borderRadius:'6px',cursor:'pointer',fontSize:'.82rem',color:'#374151'},onClick:()=>{if(fDb)fDb.ref('kong_app/board').off('value');showLoginScreen();}},'← 로그인'),
       h('span',{style:{fontWeight:700,fontSize:'.95rem'}},'📋 게시판'),
       h('div',{style:{flex:1}}),
       h('span',{style:{fontSize:'.76rem',color:'#9ca3af'}},'로그인 후 글쓰기 가능')
@@ -451,7 +463,18 @@ function showLoginBoard(){
     }
     root.appendChild(h('div',{style:{display:'flex',flexDirection:'column',height:'100vh',background:'#f3f4f6'}},topbar,content));
   }
+  // 로컬 캐시로 먼저 표시 후 Firebase 실시간 수신
+  try{boardPosts=JSON.parse(localStorage.getItem('ks_board')||'[]');}catch{boardPosts=[];}
   renderBoardPage(null);
+  // Firebase 실시간: 글이 올라오면 자동 갱신
+  if(fDb){
+    fDb.ref('kong_app/board').on('value',snap=>{
+      const val=snap.exists()&&Array.isArray(snap.val())?snap.val():[];
+      boardPosts=val;
+      try{localStorage.setItem('ks_board',JSON.stringify(val));}catch{}
+      renderBoardPage(_lbView); // 현재 보던 뷰 그대로 갱신
+    });
+  }
 }
 
 function showLoginScreen(){
@@ -944,11 +967,32 @@ function showMobileDaySheet(ds,dayEvs){
 }
 
 // ── 게시판 ─────────────────────────────────────────────────
-function loadBoard(){
+let _boardListenerOn=false;
+let _boardSavePause=false;
+
+function loadBoard(onReady){
+  // 로컬 캐시 먼저 표시
   try{boardPosts=JSON.parse(localStorage.getItem('ks_board')||'[]');}catch{boardPosts=[];}
-  if(fDb){fDb.ref('kong_app/board').get().then(s=>{if(s.exists()&&Array.isArray(s.val())){boardPosts=s.val();localStorage.setItem('ks_board',JSON.stringify(boardPosts));}}).catch(()=>{});}
+  if(onReady)onReady();
+  if(!fDb)return;
+  // 실시간 리스너 (이미 켜져 있으면 중복 등록 안 함)
+  if(_boardListenerOn)return;
+  _boardListenerOn=true;
+  fDb.ref('kong_app/board').on('value',snap=>{
+    if(_boardSavePause)return;
+    const val=snap.exists()&&Array.isArray(snap.val())?snap.val():[];
+    boardPosts=val;
+    try{localStorage.setItem('ks_board',JSON.stringify(val));}catch{}
+    // 게시판 화면이 열려 있으면 즉시 갱신
+    if(viewMode==='board'&&authUser)render();
+  });
+}
+function stopBoardListener(){
+  if(fDb&&_boardListenerOn){fDb.ref('kong_app/board').off('value');_boardListenerOn=false;}
 }
 function saveBoard(){
+  _boardSavePause=true;clearTimeout(saveBoard._t);
+  saveBoard._t=setTimeout(()=>{_boardSavePause=false;},3000);
   localStorage.setItem('ks_board',JSON.stringify(boardPosts));
   if(fDb)fDb.ref('kong_app/board').set(boardPosts).catch(()=>{});
 }
@@ -1163,7 +1207,7 @@ function renderTopbar(){
         '👤 '+authUser.username,
         authUser.role==='admin'?h('span',{class:'admin-badge'},'관리자'):null
       ):null,
-      h('button',{class:'icon-btn'+(viewMode==='board'?' active':''),onClick:()=>{viewMode='board';boardView=null;loadBoard();render();}},'📋 ',h('span',{class:'btn-lbl'},'게시판')),
+      h('button',{class:'icon-btn'+(viewMode==='board'?' active':''),onClick:()=>{viewMode='board';boardView=null;loadBoard(()=>render());}},'📋 ',h('span',{class:'btn-lbl'},'게시판')),
       h('button',{class:'icon-btn',onClick:()=>{modalMode='settings';render();}},'⚙️ ',h('span',{class:'btn-lbl'},'설정')),
       h('button',{class:'icon-btn',style:{opacity:'0.4',cursor:'not-allowed',pointerEvents:'none'},title:'팀 기능 준비 중'},'👥 ',h('span',{class:'btn-lbl'},'팀')),
       h('button',{class:'icon-btn',style:{color:'#ef4444'},onClick:doLogout,title:'로그아웃'},'↩',h('span',{class:'btn-lbl'},' 로그아웃')),
@@ -1729,6 +1773,10 @@ window.addEventListener('resize',()=>{
 });
 
 // ── 종료 확인 ────────────────────────────────
+// 모바일 세로 방향 고정 (PWA/홈화면 추가 환경)
+if(typeof screen!=='undefined'&&screen.orientation&&screen.orientation.lock){
+  screen.orientation.lock('portrait').catch(()=>{});
+}
 // 뒤로가기: 모달/시트만 닫기 (종료 확인 없음)
 window.addEventListener('popstate',()=>{
   if(modalMode){closeModal();return;}
