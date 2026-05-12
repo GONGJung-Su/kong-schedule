@@ -343,12 +343,7 @@ if(FB_CONFIGURED){
 function getUsers(){
   let users=[];
   try{const s=localStorage.getItem('ks_auth_users');users=s?JSON.parse(s):[];}catch{}
-  // admin 계정은 어느 브라우저에서도 항상 존재 보장
   if(!Array.isArray(users))users=[];
-  if(!users.find(u=>u.username==='admin')){
-    users.unshift({username:'admin',password:'8432',role:'admin'});
-    localStorage.setItem('ks_auth_users',JSON.stringify(users));
-  }
   return users;
 }
 function saveUsers(u){
@@ -358,6 +353,13 @@ function saveUsers(u){
 function getSession(){return JSON.parse(sessionStorage.getItem('ks_session')||'null');}
 function setSession(u){sessionStorage.setItem('ks_session',JSON.stringify(u));}
 function clearSession(){sessionStorage.removeItem('ks_session');}
+
+// ── 비밀번호 해시 (SHA-256) ────────────────────────────────
+async function hashPw(pw){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function isHashed(pw){return typeof pw==='string'&&/^[0-9a-f]{64}$/.test(pw);}
 
 // ── Firebase 실시간 리스너 ──────────────────────────────────
 function startFbListener(username){
@@ -387,9 +389,16 @@ function stopFbListener(){
 }
 
 let authUser=getSession();
-function doLogin(username,password){
+async function doLogin(username,password){
   const users=getUsers();
-  const u=users.find(x=>x.username===username&&x.password===password);
+  const hash=await hashPw(password);
+  // 해시 비교 우선
+  let u=users.find(x=>x.username===username&&x.password===hash);
+  if(!u){
+    // 마이그레이션: 평문 저장된 기존 계정 → 자동 해시 전환
+    u=users.find(x=>x.username===username&&!isHashed(x.password)&&x.password===password);
+    if(u){u.password=hash;saveUsers(users);}
+  }
   if(!u)return null;
   const s={username:u.username,role:u.role};
   setSession(s);authUser=s;return s;
@@ -430,6 +439,13 @@ function showLoginBoard(){
           h('button',{class:'btn bs',onClick:()=>{_lbForm={title:'',content:''};renderBoardPage(null);}},'취소'),
           h('button',{class:'btn bd',onClick:()=>{
             if(!_lbForm.title.trim()){alert('제목을 입력하세요');return;}
+            const lastPost=localStorage.getItem('ks_guest_last');
+            const now=Date.now();
+            if(lastPost&&(now-parseInt(lastPost))<60000){
+              const remain=Math.ceil((60000-(now-parseInt(lastPost)))/1000);
+              alert(`1분에 한 번만 게시 가능합니다. (${remain}초 후 가능)`);return;
+            }
+            localStorage.setItem('ks_guest_last',String(now));
             boardPosts.unshift({id:uid(),title:_lbForm.title.trim(),content:_lbForm.content.trim(),author:'Guest',category:'general',createdAt:new Date().toISOString()});
             saveBoard();_lbForm={title:'',content:''};renderBoardPage(null);
           }},'등록')
@@ -502,18 +518,52 @@ function showLoginBoard(){
   }
 }
 
+function showAdminSetupScreen(){
+  const root=document.getElementById('app');
+  root.innerHTML='';
+  const pw1=h('input',{class:'login-input',type:'password',placeholder:'admin 비밀번호 설정'});
+  const pw2=h('input',{class:'login-input',type:'password',placeholder:'비밀번호 확인'});
+  const errEl=document.createElement('div');errEl.className='login-error';
+  const btn=h('button',{class:'login-btn',onClick:async()=>{
+    if(!pw1.value){errEl.textContent='비밀번호를 입력하세요.';errEl.style.display='block';return;}
+    if(pw1.value!==pw2.value){errEl.textContent='비밀번호가 일치하지 않습니다.';errEl.style.display='block';return;}
+    const hash=await hashPw(pw1.value);
+    const users=getUsers();
+    users.unshift({username:'admin',password:hash,role:'admin'});
+    saveUsers(users);
+    toast('✅ admin 계정 설정 완료. 로그인하세요.');
+    showLoginScreen();
+  }},h('span',{},'🔐'),' admin 비밀번호 설정');
+  const card=h('div',{class:'login-card'},
+    h('div',{class:'login-icon'},'🔐'),
+    h('div',{class:'login-title'},'최초 관리자 설정'),
+    h('div',{class:'login-sub'},'앱을 처음 실행합니다. admin 비밀번호를 설정하세요.'),
+    errEl,
+    h('div',{class:'login-field'},h('label',{class:'login-label'},'비밀번호'),pw1),
+    h('div',{class:'login-field'},h('label',{class:'login-label'},'비밀번호 확인'),pw2),
+    btn
+  );
+  root.appendChild(h('div',{class:'login-wrap'},card));
+  setTimeout(()=>pw1.focus(),100);
+}
+
 function showLoginScreen(){
   const root=document.getElementById('app');
   root.innerHTML='';
+  // admin 계정 없으면 최초 설정 화면
+  const _chkUsers=getUsers();
+  if(!_chkUsers.find(u=>u.username==='admin')){showAdminSetupScreen();return;}
   const errEl=document.createElement('div');
   errEl.className='login-error';
   const lastUser=localStorage.getItem('ks_last_user')||'';
   const unEl=h('input',{class:'login-input',placeholder:'사용자명',type:'text',value:lastUser});
   const pwEl=h('input',{class:'login-input',placeholder:'비밀번호',type:'password'});
-  function tryLogin(){
+  async function tryLogin(){
     const u=unEl.value.trim(),p=pwEl.value;
     if(!u||!p){errEl.textContent='사용자명과 비밀번호를 입력하세요.';errEl.style.display='block';return;}
-    const s=doLogin(u,p);
+    btn.disabled=true;btn.textContent='확인 중...';
+    const s=await doLogin(u,p);
+    btn.disabled=false;btn.textContent='로그인';
     if(!s){errEl.textContent='사용자명 또는 비밀번호가 올바르지 않습니다.';errEl.style.display='block';pwEl.value='';return;}
     localStorage.setItem('ks_last_user',u);
     // 로그인 성공 → localStorage 먼저 로딩
@@ -1073,6 +1123,15 @@ function renderBoard(){
         h('button',{class:'btn bs',onClick:()=>{boardView=null;boardForm={title:'',content:'',category:'general'};render();}},'취소'),
         h('button',{class:'btn bd',onClick:()=>{
           if(!boardForm.title.trim()){toast('제목을 입력하세요');return;}
+          if(!authUser){
+            const lastPost=localStorage.getItem('ks_guest_last');
+            const now=Date.now();
+            if(lastPost&&(now-parseInt(lastPost))<60000){
+              const remain=Math.ceil((60000-(now-parseInt(lastPost)))/1000);
+              toast(`1분에 한 번만 게시 가능합니다. (${remain}초 후 가능)`);return;
+            }
+            localStorage.setItem('ks_guest_last',String(now));
+          }
           boardPosts.unshift({id:uid(),title:boardForm.title.trim(),content:boardForm.content.trim(),author:authUser?authUser.username:'Guest',category:boardForm.category||'general',createdAt:new Date().toISOString()});
           saveBoard();boardView=null;boardForm={title:'',content:'',category:'general'};render();toast('게시글이 등록되었습니다 ✅');
         }},'등록')
@@ -1654,13 +1713,16 @@ function renderSettings(){
             const op=h('input',{class:'fi',type:'password',placeholder:'현재 비밀번호'});
             const np=h('input',{class:'fi',type:'password',placeholder:'새 비밀번호'});
             const np2=h('input',{class:'fi',type:'password',placeholder:'새 비밀번호 확인'});
-            const btn=h('button',{class:'btn bp',style:{marginTop:'6px'},onClick:()=>{
+            const btn=h('button',{class:'btn bp',style:{marginTop:'6px'},onClick:async()=>{
               const users=getUsers();
               const me=users.find(u=>u.username===authUser.username);
-              if(!me||me.password!==op.value){toast('현재 비밀번호가 올바르지 않습니다.');return;}
+              if(!me){toast('사용자 정보를 찾을 수 없습니다.');return;}
+              const inputHash=await hashPw(op.value);
+              const match=me.password===inputHash||(!isHashed(me.password)&&me.password===op.value);
+              if(!match){toast('현재 비밀번호가 올바르지 않습니다.');return;}
               if(!np.value){toast('새 비밀번호를 입력하세요.');return;}
               if(np.value!==np2.value){toast('새 비밀번호가 일치하지 않습니다.');return;}
-              me.password=np.value;saveUsers(users);
+              me.password=await hashPw(np.value);saveUsers(users);
               op.value='';np.value='';np2.value='';
               toast('✅ 비밀번호가 변경되었습니다.');
             }},'변경');
@@ -1676,10 +1738,10 @@ function renderSettings(){
               ...users.map(u=>h('div',{style:{display:'flex',alignItems:'center',gap:'6px',padding:'5px 8px',background:'#f9fafb',borderRadius:'7px'}},
                 h('span',{style:{flex:1,fontSize:'.82rem',fontWeight:600}},u.username+(u.role==='admin'?' 👑':'')),
                 // 비밀번호 초기화 (자기 자신 제외)
-                u.username!==authUser.username?h('button',{class:'btn bs',style:{fontSize:'.7rem',padding:'2px 7px'},onClick:()=>{
+                u.username!==authUser.username?h('button',{class:'btn bs',style:{fontSize:'.7rem',padding:'2px 7px'},onClick:async()=>{
                   const pw=prompt(`"${u.username}" 새 비밀번호 입력:`);
                   if(!pw)return;
-                  u.password=pw;saveUsers(users);toast(`✅ ${u.username} 비밀번호 변경됨`);render();
+                  u.password=await hashPw(pw);saveUsers(users);toast(`✅ ${u.username} 비밀번호 변경됨`);render();
                 }},'비번변경'):null,
                 // 삭제 (자기 자신과 admin 제외)
                 u.username!==authUser.username&&u.username!=='admin'?h('button',{class:'btn bd',style:{fontSize:'.7rem',padding:'2px 7px'},onClick:()=>{
@@ -1691,13 +1753,13 @@ function renderSettings(){
             // 새 사용자 추가
             const nu=h('input',{class:'fi',placeholder:'사용자명'});
             const np=h('input',{class:'fi',type:'password',placeholder:'비밀번호'});
-            const addBtn=h('button',{class:'btn bp',style:{marginTop:'4px'},onClick:()=>{
+            const addBtn=h('button',{class:'btn bp',style:{marginTop:'4px'},onClick:async()=>{
               const uname=nu.value.trim();const pw=np.value;
               if(!uname||!pw){toast('사용자명과 비밀번호를 입력하세요.');return;}
               const all=getUsers();
               if(all.find(x=>x.username===uname)){toast('이미 존재하는 사용자명입니다.');return;}
               const roleEl=document.getElementById('new-user-role');
-              all.push({username:uname,password:pw,role:roleEl?roleEl.value:'user'});
+              all.push({username:uname,password:await hashPw(pw),role:roleEl?roleEl.value:'user'});
               saveUsers(all);nu.value='';np.value='';toast(`✅ "${uname}" 추가됨`);render();
             }},'+ 사용자 추가');
             const roleSelect=document.createElement('select');
@@ -1867,14 +1929,33 @@ window.addEventListener('popstate',()=>{
 
 // ── 앱 시작 ─────────────────────────────────
 (function initApp(){
+  function _startOrLogin(){
+    if(authUser){
+      if(curUser.name!==authUser.username){curUser.name=authUser.username;ss('curUser',curUser);}
+      fDb?fDb.ref('kong_app/events/'+authUser.username).get().then(evSnap=>{
+        if(evSnap.exists()&&Array.isArray(evSnap.val())){
+          const fbEvs=evSnap.val();
+          const localEvs=ls('ev',[]);
+          const merged=fbEvs.map(fe=>{const lo=localEvs.find(l=>l.id===fe.id);return(lo&&lo.photo)?{...fe,photo:lo.photo}:fe;});
+          events=merged;
+          try{localStorage.setItem('ks_ev_'+authUser.username,JSON.stringify(merged));}catch{}
+        }
+        render();startFbListener(authUser.username);
+      }).catch(()=>{render();startFbListener(authUser.username);}):render();
+    }else{
+      // admin 없으면 최초 설정 화면, 있으면 로그인 화면
+      const _us=getUsers();
+      if(!_us.find(u=>u.username==='admin')){showAdminSetupScreen();}
+      else{showLoginScreen();}
+    }
+  }
   if(fDb){
-    // Firebase에서 사용자 목록 로드 → localStorage와 병합
+    // Firebase에서 사용자 목록 로드
     fDb.ref('kong_app/users').get().then(snap=>{
       if(snap.exists()){
         const fbUsers=snap.val()||[];
         if(Array.isArray(fbUsers)&&fbUsers.length>0){
-          // admin은 항상 보장
-          if(!fbUsers.find(u=>u.username==='admin'))fbUsers.unshift({username:'admin',password:'8432',role:'admin'});
+          // 하드코딩 admin 제거 - Firebase 데이터 그대로 저장
           localStorage.setItem('ks_auth_users',JSON.stringify(fbUsers));
         }
       }else{
@@ -1882,26 +1963,14 @@ window.addEventListener('popstate',()=>{
         const localUsers=getUsers();
         if(localUsers.length>0)fDb.ref('kong_app/users').set(localUsers).catch(()=>{});
       }
-      if(authUser){
-        if(curUser.name!==authUser.username){curUser.name=authUser.username;ss('curUser',curUser);}
-        // 새로고침: Firebase에서 최신 일정 가져와 로컬 사진과 병합
-        fDb.ref('kong_app/events/'+authUser.username).get().then(evSnap=>{
-          if(evSnap.exists()&&Array.isArray(evSnap.val())){
-            const fbEvs=evSnap.val();
-            const localEvs=ls('ev',[]);
-            const merged=fbEvs.map(fe=>{const lo=localEvs.find(l=>l.id===fe.id);return(lo&&lo.photo)?{...fe,photo:lo.photo}:fe;});
-            events=merged;
-            try{localStorage.setItem('ks_ev_'+authUser.username,JSON.stringify(merged));}catch{}
-          }
-          render();
-          startFbListener(authUser.username); // 실시간 리스너 시작
-        }).catch(()=>{render();startFbListener(authUser.username);});
-      }else{showLoginScreen();}
-    }).catch(()=>{
-      if(authUser){render();startFbListener(authUser.username);}else{showLoginScreen();}
-    });
+      _startOrLogin();
+    }).catch(()=>_startOrLogin());
   }else{
-    if(authUser){render();}else{showLoginScreen();}
+    if(authUser){render();}else{
+      const _us=getUsers();
+      if(!_us.find(u=>u.username==='admin')){showAdminSetupScreen();}
+      else{showLoginScreen();}
+    }
   }
 })();
 </script>
