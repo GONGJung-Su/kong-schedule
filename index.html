@@ -1250,7 +1250,7 @@ function renderSidebar(){
   const upLimit=addD(todayStr,365);
   const isLunarRecur=t=>t==='monthly_lunar'||t==='yearly_lunar';
   const recurItems=[];
-  events.filter(e=>e.emphasis&&e.recur).forEach(e=>{
+  events.filter(e=>e.recur).forEach(e=>{
     const dates=recurDates(e,todayStr,upLimit);
     const allDates=[e.date,...dates].filter(d=>d>=todayStr&&d<=upLimit);
     if(allDates.length>0){
