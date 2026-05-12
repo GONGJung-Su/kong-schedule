@@ -60,30 +60,32 @@ body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans
 .no-up{font-size:.74rem;color:#9ca3af;text-align:center;padding:10px}
 .team-indicator{font-size:.7rem;padding:3px 8px;border-radius:10px;background:#ede9fe;color:#4f46e5;font-weight:600;text-align:center}
 /* BOARD */
-.board-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden;background:#f3f4f6}
+.board-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden;background:#fff}
 .board-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:white}
 .board-title-bar{font-size:.95rem;font-weight:700;color:#111827;display:flex;align-items:center;gap:6px}
 .board-body{flex:1;overflow-y:auto;display:flex;flex-direction:column}
 /* 공지 영역 (회색) */
-.board-notice-zone{background:#f0f0f0;border-bottom:2px solid #e5e7eb;padding:12px 20px;flex-shrink:0}
-.board-notice-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.board-notice-label{font-size:.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:4px}
-.board-notice-list{display:flex;flex-direction:column;gap:5px}
-.board-notice-item{background:#e8e8e8;border-radius:6px;padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .1s}
-.board-notice-item:hover{background:#dcdcdc}
-.board-notice-badge{font-size:.66rem;font-weight:700;color:white;background:#6b7280;padding:1px 6px;border-radius:3px;flex-shrink:0}
-.board-notice-title{font-size:.84rem;font-weight:600;color:#374151;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.board-notice-meta{font-size:.68rem;color:#9ca3af;flex-shrink:0}
+.board-notice-zone{background:#f0f0f0;border-bottom:2px solid #e5e7eb;padding:10px 20px;flex-shrink:0}
+.board-notice-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.board-notice-label{font-size:.72rem;font-weight:700;color:#6b7280;letter-spacing:.5px;display:flex;align-items:center;gap:4px}
+.board-notice-list{display:flex;flex-direction:column;gap:0}
+.board-notice-item{padding:7px 4px;cursor:pointer;border-bottom:1px solid #ddd;transition:background .1s}
+.board-notice-item:last-child{border-bottom:none}
+.board-notice-item:hover{background:#e8e8e8}
+.board-notice-item-title{font-size:.84rem;font-weight:700;color:#1f2937;margin-bottom:2px}
+.board-notice-item-body{font-size:.77rem;color:#6b7280;line-height:1.5;white-space:pre-wrap;word-break:break-all}
+.board-notice-item-meta{font-size:.67rem;color:#9ca3af;margin-top:3px}
 .board-notice-empty{font-size:.78rem;color:#9ca3af;text-align:center;padding:10px 0}
-/* 일반 게시글 영역 */
-.board-general-zone{flex:1;padding:12px 20px;display:flex;flex-direction:column;gap:6px}
-.board-general-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.board-general-label{font-size:.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.6px}
-.board-item{background:white;border:1px solid #e5e7eb;border-radius:8px;padding:10px 16px;cursor:pointer;transition:box-shadow .1s;display:flex;align-items:center;gap:10px}
-.board-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.board-item-body{flex:1;min-width:0}
-.board-item-title{font-size:.86rem;font-weight:600;color:#1f2937;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.board-item-meta{font-size:.71rem;color:#9ca3af}
+/* 일반 게시글 영역 - 테이블 행 스타일 */
+.board-general-zone{flex:1;padding:0;display:flex;flex-direction:column}
+.board-row{display:flex;align-items:baseline;padding:9px 20px;border-bottom:1px solid #f0f0f0;cursor:pointer;gap:10px;transition:background .1s;background:white}
+.board-row:hover{background:#f8f9ff}
+.board-row-dot{color:#9ca3af;font-size:.8rem;flex-shrink:0}
+.board-row-date{font-size:.73rem;color:#9ca3af;flex-shrink:0;min-width:62px}
+.board-row-mid{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;overflow:hidden}
+.board-row-title{font-size:.84rem;font-weight:700;color:#1f2937;white-space:nowrap;flex-shrink:0;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.board-row-preview{font-size:.78rem;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.board-row-author{font-size:.73rem;color:#9ca3af;flex-shrink:0}
 .board-empty{text-align:center;padding:24px 0;color:#9ca3af;font-size:.82rem}
 /* 글쓰기 폼 */
 .board-write-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden;background:white}
@@ -1106,7 +1108,7 @@ function renderBoard(){
       h('button',{class:'btn-add-ev',style:{fontSize:'.78rem',padding:'5px 14px'},onClick:()=>{boardView='write';boardForm={title:'',content:'',category:'general'};render();}},'+ 글쓰기')
     ),
     h('div',{class:'board-body'},
-      // 공지 영역 (회색)
+      // 공지 영역 (회색) - 제목 + 본문 내용 표시
       h('div',{class:'board-notice-zone'},
         h('div',{class:'board-notice-hd'},
           h('span',{class:'board-notice-label'},'📢 공지사항'),
@@ -1114,27 +1116,33 @@ function renderBoard(){
         ),
         notices.length===0
           ?h('div',{class:'board-notice-empty'},'등록된 공지가 없습니다')
-          :h('div',{class:'board-notice-list'},...notices.map(p=>
-            h('div',{class:'board-notice-item',onClick:()=>{boardView={id:p.id};render();}},
-              h('span',{class:'board-notice-badge'},'공지'),
-              h('span',{class:'board-notice-title'},p.title),
-              h('span',{class:'board-notice-meta'},`${p.author} · ${dtFmt(p.createdAt)}`)
-            )
-          ))
+          :h('div',{class:'board-notice-list'},...notices.map(p=>{
+            const ni=h('div',{class:'board-notice-item'},
+              h('div',{class:'board-notice-item-title'},p.title),
+              p.content?h('div',{class:'board-notice-item-body'},p.content):null,
+              h('div',{class:'board-notice-item-meta'},`${p.author} · ${dtFmt(p.createdAt)}`)
+            );
+            ni.addEventListener('click',()=>{boardView={id:p.id};render();});
+            return ni;
+          }))
       ),
-      // 일반 게시글 영역
+      // 일반 게시글 영역 - 행 테이블 스타일
       h('div',{class:'board-general-zone'},
         generals.length===0
           ?h('div',{class:'board-empty'},'등록된 게시글이 없습니다')
           :generals.map(p=>{
-            const item=h('div',{class:'board-item'},
-              h('div',{class:'board-item-body'},
-                h('div',{class:'board-item-title'},p.title),
-                h('div',{class:'board-item-meta'},`${p.author} · ${dtFmt(p.createdAt)}`)
-              )
+            const preview=(p.content||'').replace(/\n/g,' ').trim();
+            const row=h('div',{class:'board-row'},
+              h('span',{class:'board-row-dot'},'•'),
+              h('span',{class:'board-row-date'},dtFmt(p.createdAt)),
+              h('div',{class:'board-row-mid'},
+                h('span',{class:'board-row-title'},p.title),
+                preview?h('span',{class:'board-row-preview'},preview):null
+              ),
+              h('span',{class:'board-row-author'},p.author)
             );
-            item.addEventListener('click',()=>{boardView={id:p.id};render();});
-            return item;
+            row.addEventListener('click',()=>{boardView={id:p.id};render();});
+            return row;
           })
       )
     )
