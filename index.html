@@ -282,18 +282,13 @@ select.fi{cursor:pointer}
   .form-row{grid-template-columns:1fr}
   .modal-body{padding:12px 14px}
 }
-/* 모바일 가로 회전 방지 - 항상 세로 레이아웃 유지 */
-@media screen and (orientation:landscape) and (max-width:1024px) and (pointer:coarse){
-  html{
-    transform:rotate(-90deg);
-    transform-origin:left top;
-    width:100vh;
-    height:100vw;
-    overflow:hidden;
-    position:fixed;
-    top:100%;
-    left:0;
-  }
+/* 모바일 가로 회전 방지 - JS로 제어 (CSS 미디어쿼리는 키보드에 오작동) */
+html.force-portrait{
+  transform:rotate(-90deg);
+  transform-origin:left top;
+  overflow:hidden;
+  position:fixed;
+  left:0;
 }
 /* 모바일 하루 일정 바텀시트 */
 .mb-sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:8000;display:flex;align-items:flex-end}
@@ -1773,10 +1768,40 @@ window.addEventListener('resize',()=>{
 });
 
 // ── 종료 확인 ────────────────────────────────
-// 모바일 세로 방향 고정 (PWA/홈화면 추가 환경)
-if(typeof screen!=='undefined'&&screen.orientation&&screen.orientation.lock){
-  screen.orientation.lock('portrait').catch(()=>{});
-}
+// 모바일 가로 회전 방지 (물리 화면 기준 - 키보드에 영향 안 받음)
+(function initOrientationLock(){
+  if(!_isMobile)return;
+  // PWA 환경에서는 OS 레벨 잠금 시도
+  if(screen.orientation&&screen.orientation.lock){
+    screen.orientation.lock('portrait').catch(()=>{});
+  }
+  function getPhysicalLandscape(){
+    // screen.width/height는 물리 화면 크기 - 키보드와 무관
+    if(screen.orientation&&typeof screen.orientation.angle==='number'){
+      return screen.orientation.angle===90||screen.orientation.angle===270;
+    }
+    return screen.width>screen.height;
+  }
+  function applyLock(){
+    const el=document.documentElement;
+    if(getPhysicalLandscape()){
+      const W=screen.height; // 세로 폭
+      const H=screen.width;  // 세로 높이
+      el.style.width=W+'px';
+      el.style.height=H+'px';
+      el.style.top=H+'px';
+      el.classList.add('force-portrait');
+    }else{
+      el.style.width='';
+      el.style.height='';
+      el.style.top='';
+      el.classList.remove('force-portrait');
+    }
+  }
+  applyLock();
+  window.addEventListener('orientationchange',()=>{setTimeout(applyLock,50);});
+  // resize는 무시 (키보드 오작동 방지)
+})();
 // 뒤로가기: 모달/시트만 닫기 (종료 확인 없음)
 window.addEventListener('popstate',()=>{
   if(modalMode){closeModal();return;}
