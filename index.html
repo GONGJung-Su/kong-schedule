@@ -273,6 +273,15 @@ select.fi{cursor:pointer}
 .mb-dnum.is-today{background:#16a34a;color:white}
 .mb-dnum.is-red{color:#ef4444}
 .mb-dnum.is-sat{color:#3b82f6}
+/* 4컬럼 날짜셀 / 일정셀 */
+.mb-date-cell{background:white;padding:3px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:background .1s;border-right:1px solid #e5e7eb}
+.mb-date-cell:hover{background:#f8faff!important}
+.mb-date-cell.mb-today{background:#f0fdf4!important}
+.mb-date-cell.mb-sel:not(.mb-today){background:#eef2ff!important}
+.mb-ev-cell{background:white;padding:3px 4px;cursor:pointer;overflow:hidden;transition:background .1s;display:flex;flex-direction:column;gap:1px;min-height:0}
+.mb-ev-cell:hover{background:#f8faff!important}
+.mb-ev-cell.mb-today{background:#f5f3ff!important}
+.mb-ev-cell.mb-sel:not(.mb-today){background:#eef2ff!important}
 /* 모바일 일정 글씨 */
 @media(max-width:700px){
   .ev-pill{font-size:.8rem;padding:1px 4px;margin-bottom:0px;line-height:1.3;}
@@ -1458,41 +1467,47 @@ function renderMonth(){
   );
 }
 
-// ── 2-WEEK VIEW ────────────────────────────────────────────
+// ── 2-WEEK VIEW (4컬럼: 날짜1|일정1|날짜2|일정2, 7행) ──────
 function render2Week(){
-  const ws=wkStart(tw2Base); // tw2Base 기준 (이전/다음 버튼으로만 변경)
+  const ws=wkStart(tw2Base);
   const allDays=Array.from({length:14},(_,i)=>{const ds=addD(ws,i);return{d:parseD(ds),ds};});
   const s=allDays[0].ds,en=allDays[13].ds;
   const ebd=getEvMap(s,en);
-  function weekBlock(days){
-    return h('div',{},
-      h('div',{class:'tw-week-hdr'},...days.map(({d,ds})=>{
-        const dow=d.getDay(),isT=ds===todayStr,isSel=ds===selDate&&!isT;
-        const hol=getHol(ds);const isRed=dow===0||!!hol;
-        let dc='tw-date';if(isT)dc+=' tw-today';else if(isSel)dc+=' tw-sel';
-        const el=h('div',{class:'tw-hdr-cell'},
-          h('div',{class:'tw-dow',style:{color:isRed?'#ef4444':dow===6?'#3b82f6':'#6b7280'}},DOWS[dow]),
-          h('div',{class:dc,style:{color:isT?undefined:isRed?'#ef4444':dow===6?'#3b82f6':'#374151'}},String(d.getDate()))
-        );
-        // 날짜 클릭: selDate만 변경 (창 이동 없음)
-        el.querySelector('.tw-date').addEventListener('click',()=>{selDate=ds;render();});
-        return el;
-      })),
-      h('div',{class:'tw-body'},...days.map(({d,ds})=>{
-        const isT=ds===todayStr,isSel=ds===selDate&&!isT;
-        let cc='tw-cell';if(isT)cc+=' tw-today-c';else if(isSel)cc+=' tw-sel-c';
-        const dayEvs=ebd[ds]||[];
-        // 셀 클릭: selDate만 변경, 창 이동 없음
-        const cell=h('div',{class:cc,onClick:()=>{selDate=ds;render();}},...dayEvs.map(e=>makePill(e)));
-        cell.addEventListener('dblclick',ev=>{ev.stopPropagation();openAdd(ds);});
-        return cell;
-      }))
-    );
+  const cells=[];
+  for(let i=0;i<7;i++){
+    const w1=allDays[i],w2=allDays[i+7];
+    // 1주차 날짜 셀
+    cells.push(makeTwDateCell(w1));
+    // 1주차 일정 셀
+    cells.push(makeTwEvCell(w1,ebd));
+    // 2주차 날짜 셀
+    cells.push(makeTwDateCell(w2));
+    // 2주차 일정 셀
+    cells.push(makeTwEvCell(w2,ebd));
   }
-  return h('div',{},
-    weekBlock(allDays.slice(0,7)),
-    weekBlock(allDays.slice(7))
+  return h('div',{style:{display:'grid',gridTemplateColumns:'70px 1fr 70px 1fr',gridTemplateRows:'repeat(7,minmax(80px,1fr))',flex:1,overflow:'hidden',gap:'1px',background:'#e5e7eb'}},...cells);
+}
+function makeTwDateCell({d,ds}){
+  const dow=d.getDay(),isT=ds===todayStr,isSel=ds===selDate&&!isT;
+  const hol=getHol(ds);const isRed=dow===0||!!hol;
+  let dc='tw-date';if(isT)dc+=' tw-today';else if(isSel)dc+=' tw-sel';
+  const bg=isT?'#f0fdf4':isSel?'#eef2ff':'white';
+  const cell=h('div',{style:{background:bg,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'3px',cursor:'pointer',borderRight:'1px solid #e5e7eb',padding:'4px 2px',transition:'background .1s'}},
+    h('div',{class:'tw-dow',style:{color:isRed?'#ef4444':dow===6?'#3b82f6':'#6b7280'}},DOWS[dow]),
+    h('div',{class:dc,style:{color:isT?undefined:isRed?'#ef4444':dow===6?'#3b82f6':'#374151'}},String(d.getDate())),
+    hol?h('div',{style:{fontSize:'.58rem',color:'#ef4444',fontWeight:600,textAlign:'center',lineHeight:1.2}},hol):null
   );
+  cell.addEventListener('click',()=>{selDate=ds;render();});
+  return cell;
+}
+function makeTwEvCell({d,ds},ebd){
+  const isT=ds===todayStr,isSel=ds===selDate&&!isT;
+  const bg=isT?'#f5f3ff':isSel?'#eef2ff':'white';
+  const dayEvs=ebd[ds]||[];
+  const cell=h('div',{style:{background:bg,padding:'4px',cursor:'pointer',overflow:'hidden',display:'flex',flexDirection:'column',gap:'2px',transition:'background .1s'}},...dayEvs.map(e=>makePill(e)));
+  cell.addEventListener('click',()=>{selDate=ds;render();});
+  cell.addEventListener('dblclick',ev=>{ev.stopPropagation();openAdd(ds);});
+  return cell;
 }
 
 // ── DAY VIEW ───────────────────────────────────────────────
